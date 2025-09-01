@@ -1,7 +1,12 @@
-import { cls } from "@/lib/utils/helpers"
+import { cls } from "@/lib/utils/helpers";
 
-export default function Message({ role, children }) {
-  const isUser = role === "user"
+interface MessageProps {
+  role: "user" | "assistant";
+  children: React.ReactNode;
+}
+
+export default function Message({ role, children }: MessageProps) {
+  const isUser = role === "user";
   return (
     <div className={cls("flex gap-3", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
@@ -25,5 +30,5 @@ export default function Message({ role, children }) {
         </div>
       )}
     </div>
-  )
+  );
 }

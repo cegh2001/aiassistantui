@@ -4,17 +4,25 @@ import { User, Globe, HelpCircle, Crown, BookOpen, LogOut, ChevronRight, Check }
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 
-export default function SettingsPopover({ children }) {
+interface SettingsPopoverProps {
+  children: React.ReactNode;
+}
+
+interface LanguageNames {
+  [key: string]: string;
+}
+
+export default function SettingsPopover({ children }: SettingsPopoverProps) {
   const [open, setOpen] = useState(false)
   const [showLanguageSettings, setShowLanguageSettings] = useState(false)
   const { language, setLanguage, t, availableLanguages } = useLanguage()
 
-  const languageNames = {
+  const languageNames: LanguageNames = {
     en: "English",
     es: "Español"
   }
 
-  const handleLanguageSelect = (selectedLanguage) => {
+  const handleLanguageSelect = (selectedLanguage: string) => {
     setLanguage(selectedLanguage)
     setShowLanguageSettings(false)
   }
@@ -94,7 +102,7 @@ export default function SettingsPopover({ children }) {
                 <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{t('language')}</div>
               </div>
 
-              {availableLanguages.map((lang) => (
+              {availableLanguages.map((lang: string) => (
                 <button
                   key={lang}
                   onClick={() => handleLanguageSelect(lang)}

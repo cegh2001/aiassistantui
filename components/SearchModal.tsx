@@ -1,9 +1,21 @@
 "use client"
+
 import { motion, AnimatePresence } from "framer-motion"
 import { X, SearchIcon, Plus, Clock } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
+import { Conversation } from "@/lib/data/mockData"
 
-function getTimeGroup(dateString) {
+interface SearchModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  conversations: Conversation[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  togglePin: (id: string) => void;
+  createNewChat?: () => void;
+}
+
+function getTimeGroup(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -24,8 +36,8 @@ export default function SearchModal({
   onSelect,
   togglePin,
   createNewChat,
-}) {
-  const [query, setQuery] = useState("")
+}: SearchModalProps) {
+  const [query, setQuery] = useState<string>("")
 
   const filteredConversations = useMemo(() => {
     if (!query.trim()) return conversations
@@ -34,7 +46,7 @@ export default function SearchModal({
   }, [conversations, query])
 
   const groupedConversations = useMemo(() => {
-    const groups = {
+    const groups: Record<string, Conversation[]> = {
       Today: [],
       Yesterday: [],
       "Previous 7 Days": [],
@@ -42,7 +54,7 @@ export default function SearchModal({
     }
 
     filteredConversations
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .forEach((conv) => {
         const group = getTimeGroup(conv.updatedAt)
         groups[group].push(conv)
@@ -57,17 +69,19 @@ export default function SearchModal({
   }
 
   const handleNewChat = () => {
-    createNewChat()
+    if (createNewChat) {
+      createNewChat()
+    }
     handleClose()
   }
 
-  const handleSelectConversation = (id) => {
+  const handleSelectConversation = (id: string) => {
     onSelect(id)
     handleClose()
   }
 
   useEffect(() => {
-    const handleEscape = (e) => {
+    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose()
     }
 
@@ -113,15 +127,17 @@ export default function SearchModal({
             {/* Search Results */}
             <div className="max-h-[60vh] overflow-y-auto">
               {/* New Chat Option */}
-              <div className="border-b border-zinc-200 p-2 dark:border-zinc-800">
-                <button
-                  onClick={handleNewChat}
-                  className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                >
-                  <Plus className="h-5 w-5 text-zinc-500" />
-                  <span className="font-medium">New chat</span>
-                </button>
-              </div>
+              {createNewChat && (
+                <div className="border-b border-zinc-200 p-2 dark:border-zinc-800">
+                  <button
+                    onClick={handleNewChat}
+                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Plus className="h-5 w-5 text-zinc-500" />
+                    <span className="font-medium">New chat</span>
+                  </button>
+                </div>
+              )}
 
               {/* Conversation Groups */}
               {Object.entries(groupedConversations).map(([groupName, convs]) => {

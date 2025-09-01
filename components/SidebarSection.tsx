@@ -2,7 +2,15 @@ import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-export default function SidebarSection({ icon, title, children, collapsed, onToggle }) {
+interface SidebarSectionProps {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export default function SidebarSection({ icon, title, children, collapsed, onToggle }: SidebarSectionProps) {
   return (
     <section>
       <button

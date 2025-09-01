@@ -4,6 +4,18 @@ import { useState, useRef, useEffect } from "react"
 import { FolderIcon, ChevronRight, ChevronDown, MoreHorizontal } from "lucide-react"
 import ConversationRow from "./ConversationRow"
 import { motion, AnimatePresence } from "framer-motion"
+import { Conversation } from "@/lib/data/mockData"
+
+interface FolderRowProps {
+  name: string;
+  count: number;
+  conversations?: Conversation[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  togglePin: (id: string) => void;
+  onDeleteFolder?: (name: string) => void;
+  onRenameFolder?: (oldName: string, newName: string) => void;
+}
 
 export default function FolderRow({
   name,
@@ -14,14 +26,14 @@ export default function FolderRow({
   togglePin,
   onDeleteFolder,
   onRenameFolder,
-}) {
+}: FolderRowProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const menuRef = useRef(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false)
       }
     }

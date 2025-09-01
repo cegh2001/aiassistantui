@@ -2,8 +2,17 @@ import React from "react";
 import { Star } from "lucide-react";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { cls, timeAgo } from "@/lib/utils/helpers";
+import { Conversation } from "@/lib/data/mockData";
 
-export default function ConversationRow({ data, active, onSelect, onTogglePin, showMeta }) {
+interface ConversationRowProps {
+  data: Conversation;
+  active: boolean;
+  onSelect: () => void;
+  onTogglePin: () => void;
+  showMeta: boolean;
+}
+
+export default function ConversationRow({ data, active, onSelect, onTogglePin, showMeta }: ConversationRowProps) {
   const { t } = useLanguage();
   const count = Array.isArray(data.messages) ? data.messages.length : data.messageCount;
   return (
@@ -47,7 +56,6 @@ export default function ConversationRow({ data, active, onSelect, onTogglePin, s
           )}
         </button>
       </div>
-
       <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1 hidden w-64 rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-700 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 md:group-hover:block">
         <div className="line-clamp-6 whitespace-pre-wrap">{data.preview}</div>
       </div>

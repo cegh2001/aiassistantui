@@ -3,11 +3,22 @@ import { Asterisk, MoreHorizontal, Menu, ChevronDown } from "lucide-react"
 import { useState } from "react"
 import GhostIconButton from "./GhostIconButton"
 
-export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen }) {
+interface ChatBot {
+  name: string;
+  icon: string | React.ReactNode;
+}
+
+interface HeaderProps {
+  createNewChat: () => void;
+  sidebarCollapsed: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen }: HeaderProps) {
   const [selectedBot, setSelectedBot] = useState("GPT-5")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  const chatbots = [
+  const chatbots: ChatBot[] = [
     { name: "GPT-5", icon: "🤖" },
     { name: "Claude Sonnet 4", icon: "🎭" },
     { name: "Gemini", icon: "💎" },

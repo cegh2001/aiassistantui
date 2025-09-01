@@ -24,6 +24,39 @@ import SearchModal from "./SearchModal"
 import SettingsPopover from "./SettingsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
+import { Conversation, Template, Folder } from "@/lib/data/mockData"
+
+interface CollapsedState {
+  pinned: boolean;
+  recent: boolean;
+  folders: boolean;
+  templates: boolean;
+}
+
+interface SidebarProps {
+  open: boolean;
+  onClose: () => void;
+  collapsed: CollapsedState;
+  setCollapsed: React.Dispatch<React.SetStateAction<CollapsedState>>;
+  conversations: Conversation[];
+  pinned: Conversation[];
+  recent: Conversation[];
+  folders: Folder[];
+  folderCounts: { [key: string]: number };
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  togglePin: (id: string) => void;
+  query: string;
+  setQuery: (query: string) => void;
+  searchRef: React.RefObject<HTMLInputElement | null>;
+  createFolder: (folderName: string) => void;
+  createNewChat: () => void;
+  templates?: Template[];
+  setTemplates?: (templates: Template[]) => void;
+  onUseTemplate?: (template: Template) => void;
+  sidebarCollapsed?: boolean;
+  setSidebarCollapsed?: (collapsed: boolean) => void;
+}
 
 export default function Sidebar({
   open,
@@ -48,12 +81,12 @@ export default function Sidebar({
   onUseTemplate = () => {},
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
-}) {
+}: SidebarProps) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState(null)
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [showSearchModal, setShowSearchModal] = useState(false)
 
   // Evitar error de hidratación
@@ -61,63 +94,75 @@ export default function Sidebar({
     setMounted(true);
   }, []);
 
-  const getConversationsByFolder = (folderName) => {
+  const getConversationsByFolder = (folderName: string) => {
     return conversations.filter((conv) => conv.folder === folderName)
   }
 
-  const handleCreateFolder = (folderName) => {
+  const handleCreateFolder = (folderName: string) => {
     createFolder(folderName)
   }
 
-  const handleDeleteFolder = (folderName) => {
+  const handleDeleteFolder = (folderName: string) => {
     const updatedConversations = conversations.map((conv) =>
       conv.folder === folderName ? { ...conv, folder: null } : conv,
     )
     console.log("Delete folder:", folderName, "Updated conversations:", updatedConversations)
   }
 
-  const handleRenameFolder = (oldName, newName) => {
+  const handleRenameFolder = (oldName: string, newName: string) => {
     const updatedConversations = conversations.map((conv) =>
       conv.folder === oldName ? { ...conv, folder: newName } : conv,
     )
     console.log("Rename folder:", oldName, "to", newName, "Updated conversations:", updatedConversations)
   }
 
-  const handleCreateTemplate = (templateData) => {
+  const handleCreateTemplate = (templateData: Partial<Template> & { name: string; content: string }) => {
     if (editingTemplate) {
+      const updatedTemplate: Template = {
+        id: editingTemplate.id,
+        name: templateData.name,
+        content: templateData.content,
+        snippet: templateData.snippet || templateData.content.slice(0, 100) + (templateData.content.length > 100 ? "..." : ""),
+        createdAt: editingTemplate.createdAt,
+        updatedAt: templateData.updatedAt || new Date().toISOString(),
+      }
       const updatedTemplates = templates.map((t) =>
-        t.id === editingTemplate.id ? { ...templateData, id: editingTemplate.id } : t,
+        t.id === editingTemplate.id ? updatedTemplate : t,
       )
       setTemplates(updatedTemplates)
       setEditingTemplate(null)
     } else {
-      const newTemplate = {
-        ...templateData,
+      const newTemplate: Template = {
         id: Date.now().toString(),
+        name: templateData.name,
+        content: templateData.content,
+        snippet: templateData.snippet || templateData.content.slice(0, 100) + (templateData.content.length > 100 ? "..." : ""),
+        createdAt: templateData.createdAt || new Date().toISOString(),
+        updatedAt: templateData.updatedAt || new Date().toISOString(),
       }
       setTemplates([...templates, newTemplate])
     }
     setShowCreateTemplateModal(false)
   }
 
-  const handleEditTemplate = (template) => {
+  const handleEditTemplate = (template: Template) => {
     setEditingTemplate(template)
     setShowCreateTemplateModal(true)
   }
 
-  const handleRenameTemplate = (templateId, newName) => {
+  const handleRenameTemplate = (templateId: string, newName: string) => {
     const updatedTemplates = templates.map((t) =>
       t.id === templateId ? { ...t, name: newName, updatedAt: new Date().toISOString() } : t,
     )
     setTemplates(updatedTemplates)
   }
 
-  const handleDeleteTemplate = (templateId) => {
+  const handleDeleteTemplate = (templateId: string) => {
     const updatedTemplates = templates.filter((t) => t.id !== templateId)
     setTemplates(updatedTemplates)
   }
 
-  const handleUseTemplate = (template) => {
+  const handleUseTemplate = (template: Template) => {
     onUseTemplate(template)
   }
 
@@ -131,7 +176,7 @@ export default function Sidebar({
       >
         <div className="flex items-center justify-center border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
           <button
-            onClick={() => setSidebarCollapsed(false)}
+            onClick={() => setSidebarCollapsed!(false)}
             className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
             aria-label="Open sidebar"
             title="Open sidebar"
@@ -216,7 +261,7 @@ export default function Sidebar({
               </div>
               <div className="ml-auto flex items-center gap-1">
                 <button
-                  onClick={() => setSidebarCollapsed(true)}
+                  onClick={() => setSidebarCollapsed!(true)}
                   className="hidden md:block rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
                   aria-label="Close sidebar"
                   title="Close sidebar"
@@ -269,7 +314,7 @@ export default function Sidebar({
                 icon={<Star className="h-4 w-4" />}
                 title={t('pinned').toUpperCase()}
                 collapsed={collapsed.pinned}
-                onToggle={() => setCollapsed((s) => ({ ...s, pinned: !s.pinned }))}
+                onToggle={() => setCollapsed({ ...collapsed, pinned: !collapsed.pinned })}
               >
                 {pinned.length === 0 ? (
                   <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
@@ -283,6 +328,7 @@ export default function Sidebar({
                       active={c.id === selectedId}
                       onSelect={() => onSelect(c.id)}
                       onTogglePin={() => togglePin(c.id)}
+                      showMeta={false}
                     />
                   ))
                 )}
@@ -292,7 +338,7 @@ export default function Sidebar({
                 icon={<Clock className="h-4 w-4" />}
                 title={t('recent').toUpperCase()}
                 collapsed={collapsed.recent}
-                onToggle={() => setCollapsed((s) => ({ ...s, recent: !s.recent }))}
+                onToggle={() => setCollapsed({ ...collapsed, recent: !collapsed.recent })}
               >
                 {recent.length === 0 ? (
                   <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
@@ -316,7 +362,7 @@ export default function Sidebar({
                 icon={<FolderIcon className="h-4 w-4" />}
                 title={t('folders').toUpperCase()}
                 collapsed={collapsed.folders}
-                onToggle={() => setCollapsed((s) => ({ ...s, folders: !s.folders }))}
+                onToggle={() => setCollapsed({ ...collapsed, folders: !collapsed.folders })}
               >
                 <div className="-mx-1">
                   <button
@@ -346,7 +392,7 @@ export default function Sidebar({
                 icon={<FileText className="h-4 w-4" />}
                 title={t('templates').toUpperCase()}
                 collapsed={collapsed.templates}
-                onToggle={() => setCollapsed((s) => ({ ...s, templates: !s.templates }))}
+                onToggle={() => setCollapsed({ ...collapsed, templates: !collapsed.templates })}
               >
                 <div className="-mx-1">
                   <button

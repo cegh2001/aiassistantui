@@ -22,12 +22,13 @@ async function ensureConnection() {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { table: string } }
+  { params }: { params: Promise<{ table: string }> }
 ) {
   try {
     await ensureConnection();
     
-    const validated = TableInfoSchema.parse({ table: params.table });
+    const resolvedParams = await params;
+    const validated = TableInfoSchema.parse({ table: resolvedParams.table });
     const info = await dbManager.getTableInfo(validated.table);
     
     return NextResponse.json({

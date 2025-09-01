@@ -1,13 +1,25 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { translations } from './translations'
 
-const LanguageContext = createContext()
+interface LanguageContextValue {
+  language: string;
+  setLanguage: (language: string) => void;
+  t: (key: string) => string;
+  availableLanguages: string[];
+  mounted: boolean;
+}
 
-export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState('en')
-  const [mounted, setMounted] = useState(false)
+const LanguageContext = createContext<LanguageContextValue | undefined>(undefined)
+
+interface LanguageProviderProps {
+  children: ReactNode;
+}
+
+export function LanguageProvider({ children }: LanguageProviderProps) {
+  const [language, setLanguage] = useState<string>('en')
+  const [mounted, setMounted] = useState<boolean>(false)
 
   useEffect(() => {
     // Marcar como montado para evitar problemas de hidratación
@@ -16,12 +28,12 @@ export function LanguageProvider({ children }) {
     // Load saved language from localStorage
     try {
       const saved = localStorage.getItem('language')
-      if (saved && translations[saved]) {
+      if (saved && (translations as any)[saved]) {
         setLanguage(saved)
       } else {
         // Detect browser language
         const browserLang = navigator.language.split('-')[0]
-        if (translations[browserLang]) {
+        if ((translations as any)[browserLang]) {
           setLanguage(browserLang)
         }
       }
@@ -41,11 +53,11 @@ export function LanguageProvider({ children }) {
     }
   }, [language, mounted])
 
-  const t = (key) => {
-    return translations[language]?.[key] || translations.en[key] || key
+  const t = (key: string): string => {
+    return (translations as any)[language]?.[key] || (translations as any).en[key] || key
   }
 
-  const value = {
+  const value: LanguageContextValue = {
     language,
     setLanguage,
     t,
@@ -60,7 +72,7 @@ export function LanguageProvider({ children }) {
   )
 }
 
-export function useLanguage() {
+export function useLanguage(): LanguageContextValue {
   const context = useContext(LanguageContext)
   if (!context) {
     throw new Error('useLanguage must be used within a LanguageProvider')

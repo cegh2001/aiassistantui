@@ -6,12 +6,22 @@ import ComposerActionsPopover from "./ComposerActionsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
 
-const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
+interface ComposerProps {
+  onSend?: (value: string) => Promise<void>;
+  busy?: boolean;
+}
+
+export interface ComposerRef {
+  insertTemplate: (templateContent: string) => void;
+  focus: () => void;
+}
+
+const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSend, busy }, ref) {
   const [value, setValue] = useState("")
   const [sending, setSending] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const [lineCount, setLineCount] = useState(1)
-  const inputRef = useRef(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -42,7 +52,7 @@ const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
   useImperativeHandle(
     ref,
     () => ({
-      insertTemplate: (templateContent) => {
+      insertTemplate: (templateContent: string) => {
         setValue((prev) => {
           const newValue = prev ? `${prev}\n\n${templateContent}` : templateContent
           setTimeout(() => {

@@ -6,8 +6,13 @@ import Message from "./Message"
 import Composer from "./Composer"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls, timeAgo } from "@/lib/utils/helpers"
+import { Conversation, Message as MessageType } from "@/lib/data/mockData"
 
-function ThinkingMessage({ onPause }) {
+interface ThinkingMessageProps {
+  onPause: () => void;
+}
+
+function ThinkingMessage({ onPause }: ThinkingMessageProps) {
   const { t } = useLanguage();
   return (
     <Message role="assistant">
@@ -29,20 +34,33 @@ function ThinkingMessage({ onPause }) {
   )
 }
 
-const ChatPanel = forwardRef(function ChatPanel(
+interface ChatPanelProps {
+  conversation: Conversation | null;
+  onSend?: (content: string) => void | Promise<void>;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onResendMessage?: (messageId: string) => void;
+  isThinking: boolean;
+  onPauseThinking: () => void;
+}
+
+interface ChatPanelRef {
+  insertTemplate: (templateContent: string) => void;
+}
+
+const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
   { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking },
   ref,
 ) {
-  const [editingId, setEditingId] = useState(null)
-  const [draft, setDraft] = useState("")
-  const [busy, setBusy] = useState(false)
-  const composerRef = useRef(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<string>("")
+  const [busy, setBusy] = useState<boolean>(false)
+  const composerRef = useRef<any>(null)
   const { t } = useLanguage();
 
   useImperativeHandle(
     ref,
     () => ({
-      insertTemplate: (templateContent) => {
+      insertTemplate: (templateContent: string) => {
         composerRef.current?.insertTemplate(templateContent)
       },
     }),
@@ -55,7 +73,7 @@ const ChatPanel = forwardRef(function ChatPanel(
   const messages = Array.isArray(conversation.messages) ? conversation.messages : []
   const count = messages.length || conversation.messageCount || 0
 
-  function startEdit(m) {
+  function startEdit(m: MessageType) {
     setEditingId(m.id)
     setDraft(m.content)
   }
@@ -86,12 +104,12 @@ const ChatPanel = forwardRef(function ChatPanel(
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-5 dark:border-zinc-800">
-          {tags.map((t) => (
+          {tags.map((tag) => (
             <span
-              key={t}
+              key={tag}
               className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:text-zinc-200"
             >
-              {t}
+              {tag}
             </span>
           ))}
         </div>
@@ -160,7 +178,7 @@ const ChatPanel = forwardRef(function ChatPanel(
 
       <Composer
         ref={composerRef}
-        onSend={async (text) => {
+        onSend={async (text: string) => {
           if (!text.trim()) return
           setBusy(true)
           await onSend?.(text)
@@ -171,5 +189,7 @@ const ChatPanel = forwardRef(function ChatPanel(
     </div>
   )
 })
+
+export type { ChatPanelRef }
 
 export default ChatPanel

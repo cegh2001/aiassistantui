@@ -220,14 +220,15 @@ export default function AIAssistantUI() {
   }
 
   function handleUseTemplate(template: Template) {
-    // This will be passed down to the Composer component
-    // The Composer will handle inserting the template content
-    if (composerRef.current) {
-      composerRef.current.insertTemplate(template.content)
+    // This will be passed down to the ChatPanel component
+    // The ChatPanel will handle inserting the template content to the Composer
+    if (chatPanelRef.current) {
+      chatPanelRef.current.insertTemplate(template.content)
     }
   }
 
   const composerRef = useRef<any>(null)
+  const chatPanelRef = useRef<any>(null)
 
   const selected = conversations.find((c) => c.id === selectedId) || null
 
@@ -284,11 +285,23 @@ export default function AIAssistantUI() {
             setSidebarOpen={setSidebarOpen} 
           />
           <ChatPanel
-            ref={composerRef}
+            ref={chatPanelRef}
             conversation={selected}
-            onSend={(content: string) => selected && sendMessage(selected.id, content)}
-            onEditMessage={(messageId: string, newContent: string) => selected && editMessage(selected.id, messageId, newContent)}
-            onResendMessage={(messageId: string) => selected && resendMessage(selected.id, messageId)}
+            onSend={(content: string) => {
+              if (selected) {
+                sendMessage(selected.id, content)
+              }
+            }}
+            onEditMessage={(messageId: string, newContent: string) => {
+              if (selected) {
+                editMessage(selected.id, messageId, newContent)
+              }
+            }}
+            onResendMessage={(messageId: string) => {
+              if (selected) {
+                resendMessage(selected.id, messageId)
+              }
+            }}
             isThinking={isThinking && thinkingConvId === selected?.id}
             onPauseThinking={pauseThinking}
           />
