@@ -1,7 +1,7 @@
 import React from "react";
 import { Star } from "lucide-react";
 import { useLanguage } from "../lib/i18n/LanguageContext";
-import { cls, timeAgo } from "./utils";
+import { cls, timeAgo } from "@/lib/utils/helpers";
 
 export default function ConversationRow({ data, active, onSelect, onTogglePin, showMeta }) {
   const { t } = useLanguage();

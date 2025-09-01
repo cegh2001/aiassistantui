@@ -4,7 +4,7 @@ import { useRef, useState, forwardRef, useImperativeHandle, useEffect } from "re
 import { Send, Loader2, Plus, Mic, ArrowUp } from "lucide-react"
 import ComposerActionsPopover from "./ComposerActionsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
-import { cls } from "./utils"
+import { cls } from "@/lib/utils/helpers"
 
 const Composer = forwardRef(function Composer({ onSend, busy }, ref) {
   const [value, setValue] = useState("")

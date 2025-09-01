@@ -4,43 +4,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
-import ChatPane from "./ChatPane"
+import ChatPanel from "./ChatPanel"
 import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
-import { INITIAL_CONVERSATIONS, INITIAL_TEMPLATES, INITIAL_FOLDERS } from "./mockData"
+import { useLanguage } from "../lib/i18n/LanguageContext"
+import { INITIAL_CONVERSATIONS, INITIAL_TEMPLATES, INITIAL_FOLDERS } from "@/lib/data/mockData"
 
 export default function AIAssistantUI() {
-  const [theme, setTheme] = useState(() => {
-    const saved = typeof window !== "undefined" && localStorage.getItem("theme")
-    if (saved) return saved
-    if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
-      return "dark"
-    return "light"
-  })
-
-  useEffect(() => {
-    try {
-      if (theme === "dark") document.documentElement.classList.add("dark")
-      else document.documentElement.classList.remove("dark")
-      document.documentElement.setAttribute("data-theme", theme)
-      document.documentElement.style.colorScheme = theme
-      localStorage.setItem("theme", theme)
-    } catch {}
-  }, [theme])
-
-  useEffect(() => {
-    try {
-      const media = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)")
-      if (!media) return
-      const listener = (e) => {
-        const saved = localStorage.getItem("theme")
-        if (!saved) setTheme(e.matches ? "dark" : "light")
-      }
-      media.addEventListener("change", listener)
-      return () => media.removeEventListener("change", listener)
-    } catch {}
-  }, [])
-
+  const { t } = useLanguage()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(() => {
     try {
@@ -134,10 +105,10 @@ export default function AIAssistantUI() {
     const id = Math.random().toString(36).slice(2)
     const item = {
       id,
-      title: "New Chat",
+      title: t('newChat') || "New Chat",
       updatedAt: new Date().toISOString(),
       messageCount: 0,
-      preview: "Say hello to start...",
+      preview: t('sayHelloToStart') || "Say hello to start...",
       pinned: false,
       folder: "Work Projects",
       messages: [], // Ensure messages array is empty for new chats
@@ -261,16 +232,14 @@ export default function AIAssistantUI() {
           <GhostIconButton label="More">
             <MoreHorizontal className="h-4 w-4" />
           </GhostIconButton>
-          <ThemeToggle theme={theme} setTheme={setTheme} />
+          <ThemeToggle />
         </div>
       </div>
 
-      <div className="mx-auto flex h-[calc(100vh-0px)] max-w-[1400px]">
+      <div className="flex h-[calc(100vh-0px)] w-full">
         <Sidebar
           open={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
-          theme={theme}
-          setTheme={setTheme}
           collapsed={collapsed}
           setCollapsed={setCollapsed}
           sidebarCollapsed={sidebarCollapsed}
@@ -295,7 +264,7 @@ export default function AIAssistantUI() {
 
         <main className="relative flex min-w-0 flex-1 flex-col">
           <Header createNewChat={createNewChat} sidebarCollapsed={sidebarCollapsed} setSidebarOpen={setSidebarOpen} />
-          <ChatPane
+          <ChatPanel
             ref={composerRef}
             conversation={selected}
             onSend={(content) => selected && sendMessage(selected.id, content)}

@@ -1,6 +1,39 @@
-import { makeId } from "./utils"
+import { makeId } from "@/lib/utils/helpers"
 
-export const INITIAL_CONVERSATIONS = [
+export interface Message {
+  id: string
+  role: "user" | "assistant"
+  content: string
+  createdAt: string
+  editedAt?: string
+}
+
+export interface Conversation {
+  id: string
+  title: string
+  updatedAt: string
+  messageCount: number
+  preview: string
+  pinned: boolean
+  folder: string
+  messages: Message[]
+}
+
+export interface Template {
+  id: string
+  name: string
+  content: string
+  snippet: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Folder {
+  id: string
+  name: string
+}
+
+export const INITIAL_CONVERSATIONS: Conversation[] = [
   {
     id: "c1",
     title: "Marketing plan for launch",
@@ -126,7 +159,7 @@ export const INITIAL_CONVERSATIONS = [
   },
 ]
 
-export const INITIAL_TEMPLATES = [
+export const INITIAL_TEMPLATES: Template[] = [
   {
     id: "t1",
     name: "Bug Report",
@@ -234,7 +267,7 @@ Additional context and discussion points`,
   },
 ]
 
-export const INITIAL_FOLDERS = [
+export const INITIAL_FOLDERS: Folder[] = [
   { id: "f1", name: "Work Projects" },
   { id: "f2", name: "Personal" },
   { id: "f3", name: "Code Reviews" },

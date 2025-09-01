@@ -5,7 +5,7 @@ import { Pencil, RefreshCw, Check, X, Square } from "lucide-react"
 import Message from "./Message"
 import Composer from "./Composer"
 import { useLanguage } from "../lib/i18n/LanguageContext"
-import { cls, timeAgo } from "./utils"
+import { cls, timeAgo } from "@/lib/utils/helpers"
 
 function ThinkingMessage({ onPause }) {
   const { t } = useLanguage();
@@ -29,7 +29,7 @@ function ThinkingMessage({ onPause }) {
   )
 }
 
-const ChatPane = forwardRef(function ChatPane(
+const ChatPanel = forwardRef(function ChatPanel(
   { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking },
   ref,
 ) {
@@ -172,4 +172,4 @@ const ChatPane = forwardRef(function ChatPane(
   )
 })
 
-export default ChatPane
+export default ChatPanel
