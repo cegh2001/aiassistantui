@@ -10,6 +10,8 @@ export interface UseConversationsReturn {
   conversations: Conversation[]
   selectedConversation: Conversation | null
   isLoading: boolean
+  isLoadingMore: boolean
+  hasMore: boolean
   error: string | null
   
   // Operaciones de conversación
@@ -24,7 +26,8 @@ export interface UseConversationsReturn {
   addMessage: (conversationId: string, message: Message) => Promise<void>
   
   // Utilidades
-  refreshConversations: () => Promise<void>
+  refreshConversations: (forceRefresh?: boolean) => Promise<void>
+  loadMoreConversations: () => Promise<void>
   getFilteredConversations: (filter: {
     pinned?: boolean
     folder?: string
@@ -39,18 +42,38 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [lastLoadTime, setLastLoadTime] = useState<number>(0)
 
   const conversationService = ConversationClientService.getInstance()
 
-  // Cargar conversaciones
-  const loadConversations = useCallback(async () => {
+  // Caché de 30 segundos para evitar cargas innecesarias
+  const CACHE_DURATION = 30 * 1000 // 30 segundos
+
+  // Cargar conversaciones con caché
+  const loadConversations = useCallback(async (forceRefresh = false) => {
+    const now = Date.now()
+    
+    // Si no es forzado y tenemos caché válido, no recargar
+    if (!forceRefresh && conversations.length > 0 && (now - lastLoadTime) < CACHE_DURATION) {
+      console.log('📦 Usando caché de conversaciones')
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     
     try {
       const loadedConversations = await conversationService.listConversations()
       setConversations(loadedConversations)
+      setLastLoadTime(now)
+      
+      // Si obtenemos exactamente 10 conversaciones (el límite inicial), hay posibilidad de más
+      setHasMore(loadedConversations.length === 10)
+      
+      console.log(`✅ Cargadas ${loadedConversations.length} conversaciones`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error cargando conversaciones'
       setError(errorMessage)
@@ -58,13 +81,13 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     } finally {
       setIsLoading(false)
     }
-  }, [conversationService])
+  }, [conversationService, conversations.length, lastLoadTime])
 
   // Crear nueva conversación
   const createConversation = useCallback(async (title?: string): Promise<string> => {
     try {
       const id = await conversationService.createConversation(title)
-      await loadConversations()
+      await loadConversations(true) // Forzar recarga después de crear
       return id
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error creando conversación'
@@ -198,7 +221,36 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     }
   }, [conversationService, selectedConversation, loadConversations])
 
-  // Obtener conversaciones filtradas
+  // Cargar más conversaciones
+  const loadMoreConversations = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return
+    
+    setIsLoadingMore(true)
+    setError(null)
+    
+    try {
+      const moreConversations = await conversationService.loadMoreConversations(conversations.length, 5)
+      
+      if (moreConversations.length === 0) {
+        setHasMore(false)
+      } else {
+        setConversations(prev => [...prev, ...moreConversations])
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error cargando más conversaciones'
+      setError(errorMessage)
+      console.error('Error cargando más conversaciones:', err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [conversationService, conversations.length, isLoadingMore, hasMore])
+
+  // Refrescar conversaciones con caché inteligente
+  const refreshConversations = useCallback(async (forceRefresh = false) => {
+    await loadConversations(forceRefresh)
+  }, [loadConversations])
+
+  // Obtener conversaciones filtradas (usa caché local)
   const getFilteredConversations = useCallback((filter: {
     pinned?: boolean
     folder?: string
@@ -252,6 +304,8 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     conversations,
     selectedConversation,
     isLoading,
+    isLoadingMore,
+    hasMore,
     error,
     
     createConversation,
@@ -263,7 +317,8 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     
     addMessage,
     
-    refreshConversations: loadConversations,
+    refreshConversations,
+    loadMoreConversations,
     getFilteredConversations
   }
 }

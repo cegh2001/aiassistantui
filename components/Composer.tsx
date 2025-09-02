@@ -5,10 +5,13 @@ import { Send, Loader2, Plus, Mic, ArrowUp } from "lucide-react"
 import ComposerActionsPopover from "./ComposerActionsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
+import { ChatMode } from "@/lib/services/openai"
 
 interface ComposerProps {
   onSend?: (value: string) => Promise<void>;
   busy?: boolean;
+  chatMode?: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
 }
 
 export interface ComposerRef {
@@ -16,7 +19,7 @@ export interface ComposerRef {
   focus: () => void;
 }
 
-const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSend, busy }, ref) {
+const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSend, busy, chatMode = "fast", onModeChange }, ref) {
   const [value, setValue] = useState("")
   const [sending, setSending] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -121,7 +124,7 @@ const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSe
         </div>
 
         <div className="flex items-center justify-between mt-2">
-          <ComposerActionsPopover>
+          <ComposerActionsPopover chatMode={chatMode} onModeChange={onModeChange}>
             <button
               className="inline-flex shrink-0 items-center justify-center rounded-full p-2 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors"
               title={t('addAttachment')}

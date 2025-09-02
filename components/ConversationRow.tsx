@@ -14,7 +14,7 @@ interface ConversationRowProps {
 
 export default function ConversationRow({ data, active, onSelect, onTogglePin, showMeta }: ConversationRowProps) {
   const { t } = useLanguage();
-  const count = Array.isArray(data.messages) ? data.messages.length : data.messageCount;
+  
   return (
     <div className="group relative">
       <div
@@ -31,14 +31,10 @@ export default function ConversationRow({ data, active, onSelect, onTogglePin, s
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium tracking-tight">{data.title}</span>
             <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {timeAgo(data.updatedAt)}
+              {timeAgo(data.updatedAt || new Date().toISOString())}
             </span>
           </div>
-          {showMeta && (
-            <div className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {count} {t('messages')}
-            </div>
-          )}
+          {/* Removido: conteo de mensajes para UI más limpia */}
         </div>
         <button
           onClick={(e) => {

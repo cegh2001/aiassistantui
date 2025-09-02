@@ -18,22 +18,20 @@ export default function OpenAIStatus({ className = "" }: OpenAIStatusProps) {
   const checkOpenAIStatus = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('/api/chat', {
-        method: 'POST',
+      // Usar endpoint específico para verificar configuración sin enviar mensajes
+      const response = await fetch('/api/status', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: "test"
-        }),
+        }
       })
 
       const result = await response.json()
       
-      if (result.error && result.error.includes('OpenAI API key no configurada')) {
-        setIsConfigured(false)
-      } else {
+      if (result.success) {
         setIsConfigured(true)
+      } else {
+        setIsConfigured(false)
       }
     } catch (error) {
       console.error('Error checking OpenAI status:', error)

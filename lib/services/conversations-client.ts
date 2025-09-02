@@ -133,6 +133,46 @@ export class ConversationClientService {
   }
 
   /**
+   * Carga más conversaciones (más allá de las primeras 10)
+   */
+  async loadMoreConversations(startFromIndex: number = 10, limit: number = 10): Promise<Conversation[]> {
+    try {
+      const response = await fetch('/api/conversations/load-more', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ startFromIndex, limit }),
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.error || 'Error cargando más conversaciones')
+      }
+
+      // Mapear las conversaciones del servidor al formato Conversation
+      const additionalConversations: Conversation[] = result.data.map((conversation: any) => ({
+        id: conversation.id,
+        object: 'conversation',
+        created_at: conversation.created_at,
+        title: conversation.title || conversation.metadata?.title || 'Nueva conversación',
+        updatedAt: conversation.updatedAt || new Date(conversation.created_at * 1000).toISOString(),
+        messageCount: conversation.messageCount || parseInt(conversation.metadata?.messageCount || '0'),
+        preview: conversation.preview || conversation.metadata?.preview || '',
+        pinned: conversation.pinned || conversation.metadata?.pinned === 'true',
+        folder: conversation.folder || conversation.metadata?.folder || 'General',
+        metadata: conversation.metadata
+      }))
+
+      return additionalConversations
+    } catch (error) {
+      console.error('Error cargando más conversaciones:', error)
+      throw error
+    }
+  }
+
+  /**
    * Actualiza el título de una conversación
    */
   async updateTitle(conversationId: string, title: string): Promise<void> {

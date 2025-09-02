@@ -3,8 +3,6 @@ import { Asterisk, MoreHorizontal, Menu, ChevronDown } from "lucide-react"
 import { useState } from "react"
 import GhostIconButton from "./GhostIconButton"
 import OpenAIStatus from "./OpenAIStatus"
-import ChatModeSelector from "./ChatModeSelector"
-import { ChatMode } from "@/lib/services/openai"
 
 interface ChatBot {
   name: string;
@@ -15,11 +13,9 @@ interface HeaderProps {
   createNewChat: () => void;
   sidebarCollapsed: boolean;
   setSidebarOpen: (open: boolean) => void;
-  chatMode: ChatMode;
-  onModeChange: (mode: ChatMode) => void;
 }
 
-export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen, chatMode, onModeChange }: HeaderProps) {
+export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen }: HeaderProps) {
   const [selectedBot, setSelectedBot] = useState("GPT-5")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -76,11 +72,6 @@ export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen
       </div>
 
       <div className="ml-auto flex items-center gap-4">
-        <ChatModeSelector 
-          mode={chatMode} 
-          onChange={onModeChange} 
-          className="hidden md:flex" 
-        />
         <OpenAIStatus className="hidden md:flex" />
         <GhostIconButton label="More">
           <MoreHorizontal className="h-4 w-4" />

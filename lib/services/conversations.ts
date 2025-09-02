@@ -95,30 +95,74 @@ export class ConversationService {
   }
 
   /**
-   * Lista todas las conversaciones usando el store de archivos
+   * Lista conversaciones con lazy loading - solo las primeras 10 con metadata completa
    */
-  async listConversations(limit: number = 20): Promise<Conversation[]> {
+  async listConversations(limit: number = 10): Promise<Conversation[]> {
     try {
-      const conversationMetadata = await this.fileStore.getFilteredConversations({ limit })
-      const conversations: Conversation[] = []
+      // Obtener solo las conversaciones recientes del store (que tienen metadata)
+      const recentConversations = await this.fileStore.getAllConversations()
+      
+      const conversations: Conversation[] = recentConversations.slice(0, limit).map(metadata => ({
+        id: metadata.id,
+        object: 'conversation',
+        created_at: Math.floor(new Date(metadata.createdAt).getTime() / 1000),
+        metadata: {
+          title: metadata.title,
+          messageCount: metadata.messageCount.toString(),
+          preview: metadata.preview,
+          pinned: metadata.pinned.toString(),
+          folder: metadata.folder,
+          updatedAt: metadata.updatedAt
+        },
+        title: metadata.title,
+        updatedAt: metadata.updatedAt,
+        messageCount: metadata.messageCount,
+        preview: metadata.preview,
+        pinned: metadata.pinned,
+        folder: metadata.folder,
+        messages: [] // Lazy loading - no cargar mensajes hasta seleccionar
+      }))
 
-      // Obtener las conversaciones completas de la API de OpenAI
-      for (const metadata of conversationMetadata) {
-        try {
-          const conversation = await this.getConversation(metadata.id)
-          if (conversation) {
-            conversations.push(conversation)
-          }
-        } catch (error) {
-          console.warn(`No se pudo cargar conversación ${metadata.id}:`, error)
-          // Remover conversación inválida del store
-          await this.fileStore.removeConversation(metadata.id)
-        }
-      }
-
+      console.log(`✅ Cargadas ${conversations.length} conversaciones recientes (solo metadata)`)
       return conversations
     } catch (error) {
       console.error('❌ Error listando conversaciones:', error)
+      return []
+    }
+  }
+
+  /**
+   * Cargar más conversaciones - hace retrieve a OpenAI para obtener metadata
+   */
+  async loadMoreConversations(offset: number = 10, limit: number = 5): Promise<Conversation[]> {
+    try {
+      const allIds = await this.fileStore.getConversationIds()
+      const moreIds = allIds.slice(offset, offset + limit)
+      
+      if (moreIds.length === 0) {
+        return []
+      }
+
+      const conversations: Conversation[] = []
+      
+      // Hacer retrieve individual para cada conversación
+      for (const id of moreIds) {
+        try {
+          const conversation = await client.conversations.retrieve(id)
+          const formattedConversation = this.formatConversationForUI(conversation)
+          formattedConversation.messages = [] // No cargar mensajes
+          conversations.push(formattedConversation)
+        } catch (error) {
+          console.warn(`⚠️ No se pudo cargar conversación ${id}:`, error)
+          // Si la conversación no existe en OpenAI, eliminarla del store
+          await this.fileStore.removeConversation(id)
+        }
+      }
+
+      console.log(`✅ Cargadas ${conversations.length} conversaciones adicionales`)
+      return conversations
+    } catch (error) {
+      console.error('❌ Error cargando más conversaciones:', error)
       return []
     }
   }
@@ -343,7 +387,7 @@ export class ConversationService {
   }
 
   /**
-   * Obtiene conversaciones filtradas usando el store de archivos
+   * Obtiene conversaciones filtradas usando SOLO metadata del store (OPTIMIZADO)
    */
   async getFilteredConversations(filter: {
     pinned?: boolean
@@ -353,22 +397,30 @@ export class ConversationService {
   } = {}): Promise<Conversation[]> {
     try {
       const conversationMetadata = await this.fileStore.getFilteredConversations(filter)
-      const conversations: Conversation[] = []
+      
+      // Convertir metadata directamente a formato de conversación SIN cargar mensajes
+      const conversations: Conversation[] = conversationMetadata.map(metadata => ({
+        id: metadata.id,
+        object: 'conversation',
+        created_at: Math.floor(new Date(metadata.createdAt).getTime() / 1000),
+        metadata: {
+          title: metadata.title,
+          messageCount: metadata.messageCount.toString(),
+          preview: metadata.preview,
+          pinned: metadata.pinned.toString(),
+          folder: metadata.folder,
+          updatedAt: metadata.updatedAt
+        },
+        title: metadata.title,
+        updatedAt: metadata.updatedAt,
+        messageCount: metadata.messageCount,
+        preview: metadata.preview,
+        pinned: metadata.pinned,
+        folder: metadata.folder,
+        messages: [] // No cargar mensajes en el filtrado - solo cuando se selecciona
+      }))
 
-      // Obtener las conversaciones completas de la API de OpenAI
-      for (const metadata of conversationMetadata) {
-        try {
-          const conversation = await this.getConversation(metadata.id)
-          if (conversation) {
-            conversations.push(conversation)
-          }
-        } catch (error) {
-          console.warn(`No se pudo cargar conversación ${metadata.id}:`, error)
-          // Remover conversación inválida del store
-          await this.fileStore.removeConversation(metadata.id)
-        }
-      }
-
+      console.log(`✅ Filtradas ${conversations.length} conversaciones (solo metadata)`)
       return conversations
     } catch (error) {
       console.error('❌ Error obteniendo conversaciones filtradas:', error)

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
@@ -31,11 +31,13 @@ export default function AIAssistantUI() {
     }
   })
 
-  // Hook para manejar conversaciones
+  // Hook para manejar conversaciones (OPTIMIZADO)
   const {
     conversations,
     selectedConversation,
     isLoading: conversationsLoading,
+    isLoadingMore,
+    hasMore,
     error: conversationsError,
     createConversation,
     selectConversation,
@@ -43,8 +45,12 @@ export default function AIAssistantUI() {
     updateConversationTitle,
     toggleConversationPin,
     addMessage,
-    getFilteredConversations
-  } = useConversations()
+    getFilteredConversations,
+    refreshConversations,
+    loadMoreConversations
+  } = useConversations({
+    autoLoad: true // Carga automática pero con caché inteligente
+  })
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false)
   const [collapsed, setCollapsed] = useState<CollapsedState>(() => {
@@ -83,6 +89,7 @@ export default function AIAssistantUI() {
 
   const [isThinking, setIsThinking] = useState<boolean>(false)
   const [thinkingConvId, setThinkingConvId] = useState<string | null>(null)
+  const [isLoadingConversation, setIsLoadingConversation] = useState<boolean>(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -103,13 +110,27 @@ export default function AIAssistantUI() {
     return () => window.removeEventListener("keydown", onKey)
   }, [sidebarOpen])
 
-  // Obtener conversaciones filtradas usando el hook
+  // Obtener conversaciones filtradas usando el hook (OPTIMIZADO - usa caché local)
   const filtered = useMemo(() => {
     return getFilteredConversations({ search: query })
   }, [getFilteredConversations, query])
 
-  const pinned = getFilteredConversations({ pinned: true })
-  const recent = getFilteredConversations({ pinned: false, limit: 10 })
+  const pinned = useMemo(() => {
+    return getFilteredConversations({ pinned: true })
+  }, [getFilteredConversations])
+
+  const recent = useMemo(() => {
+    return getFilteredConversations({ pinned: false, limit: 10 })
+  }, [getFilteredConversations])
+
+  async function handleSelectConversation(id: string) {
+    setIsLoadingConversation(true)
+    try {
+      await selectConversation(id)
+    } finally {
+      setIsLoadingConversation(false)
+    }
+  }
 
   async function togglePin(id: string) {
     try {
@@ -131,7 +152,7 @@ export default function AIAssistantUI() {
       const title = `${modeLabel} ${timeStr}`
       
       const id = await createConversation(title)
-      selectConversation(id)
+      handleSelectConversation(id)
       setSidebarOpen(false)
     } catch (error) {
       console.error('Error creando chat:', error)
@@ -163,7 +184,7 @@ export default function AIAssistantUI() {
       
       if (response) {
         // Refrescar la conversación para mostrar los nuevos mensajes
-        await selectConversation(convId)
+        await handleSelectConversation(convId)
       }
     } catch (error: any) {
       setIsThinking(false)
@@ -244,12 +265,16 @@ export default function AIAssistantUI() {
           pinned={pinned}
           recent={recent}
           selectedId={selectedConversation?.id || null}
-          onSelect={(id: string) => selectConversation(id)}
+          onSelect={(id: string) => handleSelectConversation(id)}
           togglePin={togglePin}
           query={query}
           setQuery={setQuery}
           searchRef={searchRef}
           createNewChat={createNewChat}
+          hasMore={hasMore}
+          isLoadingMore={isLoadingMore}
+          onLoadMore={loadMoreConversations}
+          isLoadingConversations={conversationsLoading}
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
@@ -257,8 +282,6 @@ export default function AIAssistantUI() {
             createNewChat={createNewChat} 
             sidebarCollapsed={sidebarCollapsed} 
             setSidebarOpen={setSidebarOpen}
-            chatMode={mode}
-            onModeChange={setMode}
           />
           <ChatPanel
             ref={chatPanelRef}
@@ -280,6 +303,11 @@ export default function AIAssistantUI() {
             }}
             isThinking={(isThinking || isAiThinking) && thinkingConvId === selectedConversation?.id}
             onPauseThinking={pauseThinking}
+            isLoadingConversation={isLoadingConversation}
+            onCreateNewChat={createNewChat}
+            onToggleSidebar={() => setSidebarOpen(true)}
+            chatMode={mode}
+            onModeChange={setMode}
           />
         </main>
       </div>

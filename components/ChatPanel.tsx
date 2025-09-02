@@ -7,6 +7,9 @@ import Composer from "./Composer"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls, timeAgo } from "@/lib/utils/helpers"
 import { Conversation, Message as MessageType } from "@/lib/types/chat"
+import { MessageSkeleton } from "./ui/skeleton"
+import { EmptyState, LoadingState } from "./EmptyState"
+import { ChatMode } from "@/lib/services/openai"
 
 interface ThinkingMessageProps {
   onPause: () => void;
@@ -41,6 +44,11 @@ interface ChatPanelProps {
   onResendMessage?: (messageId: string) => void;
   isThinking: boolean;
   onPauseThinking: () => void;
+  isLoadingConversation?: boolean;
+  onCreateNewChat?: () => void;
+  onToggleSidebar?: () => void;
+  chatMode?: ChatMode;
+  onModeChange?: (mode: ChatMode) => void;
 }
 
 interface ChatPanelRef {
@@ -48,7 +56,7 @@ interface ChatPanelRef {
 }
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking },
+  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, isLoadingConversation = false, onCreateNewChat, onToggleSidebar, chatMode = "fast", onModeChange },
   ref,
 ) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -67,7 +75,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
     [],
   )
 
-  if (!conversation) return null
+  // Mostrar loading state si está cargando una conversación
+  if (isLoadingConversation) {
+    return <LoadingState />
+  }
+
+  // Mostrar empty state si no hay conversación seleccionada
+  if (!conversation) {
+    return <EmptyState onCreateNewChat={onCreateNewChat} onToggleSidebar={onToggleSidebar} />
+  }
 
   const tags = ["Certified", "Personalized", "Experienced", "Helpful"]
   const messages = Array.isArray(conversation.messages) ? conversation.messages : []
@@ -100,7 +116,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           <span className="block leading-[1.05] font-sans text-2xl">{conversation.title}</span>
         </div>
         <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-          {t('updated')} {timeAgo(conversation.updatedAt)} · {count} {t('messages')}
+          {t('updated')} {conversation.updatedAt ? timeAgo(conversation.updatedAt) : 'Hace poco'} · {count} {t('messages')}
         </div>
 
         <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-5 dark:border-zinc-800">
@@ -114,7 +130,9 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           ))}
         </div>
 
-        {messages.length === 0 ? (
+        {isLoadingConversation ? (
+          <MessageSkeleton />
+        ) : messages.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
             {t('noMessagesYet')}
           </div>
@@ -185,6 +203,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           setBusy(false)
         }}
         busy={busy}
+        chatMode={chatMode}
+        onModeChange={onModeChange}
       />
     </div>
   )

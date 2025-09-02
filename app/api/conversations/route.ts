@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Lista normal
+    // Lista normal (OPTIMIZADA - solo metadata)
     const conversations = await conversationService.listConversations(limit)
     return NextResponse.json({
       success: true,

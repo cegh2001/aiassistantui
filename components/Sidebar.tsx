@@ -19,6 +19,8 @@ import SettingsPopover from "./SettingsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
 import { Conversation } from "@/lib/types/chat"
+import { ConversationSkeleton } from "./ui/skeleton"
+import { LoadingSpinner } from "./ui/loading-spinner"
 
 interface CollapsedState {
   pinned: boolean;
@@ -42,6 +44,10 @@ interface SidebarProps {
   createNewChat: () => void;
   sidebarCollapsed?: boolean;
   setSidebarCollapsed?: (collapsed: boolean) => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => Promise<void>;
+  isLoadingConversations?: boolean;
 }
 
 export default function Sidebar({
@@ -61,6 +67,10 @@ export default function Sidebar({
   createNewChat,
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  isLoadingConversations = false,
 }: SidebarProps) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
@@ -214,7 +224,9 @@ export default function Sidebar({
                 collapsed={collapsed.pinned}
                 onToggle={() => setCollapsed({ ...collapsed, pinned: !collapsed.pinned })}
               >
-                {pinned.length === 0 ? (
+                {isLoadingConversations ? (
+                  <ConversationSkeleton />
+                ) : pinned.length === 0 ? (
                   <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                     Pin important threads for quick access.
                   </div>
@@ -238,7 +250,9 @@ export default function Sidebar({
                 collapsed={collapsed.recent}
                 onToggle={() => setCollapsed({ ...collapsed, recent: !collapsed.recent })}
               >
-                {recent.length === 0 ? (
+                {isLoadingConversations ? (
+                  <ConversationSkeleton />
+                ) : recent.length === 0 ? (
                   <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
                     {t('noMessagesYet')}
                   </div>
@@ -253,6 +267,20 @@ export default function Sidebar({
                       showMeta
                     />
                   ))
+                )}
+                
+                {/* Botón cargar más conversaciones */}
+                {hasMore && onLoadMore && !isLoadingConversations && (
+                  <div className="mt-2 px-2">
+                    <button
+                      onClick={onLoadMore}
+                      disabled={isLoadingMore}
+                      className="w-full flex items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-xs text-zinc-600 transition-colors hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-800/50"
+                    >
+                      {isLoadingMore && <LoadingSpinner size="sm" />}
+                      {isLoadingMore ? 'Cargando...' : 'Cargar más conversaciones'}
+                    </button>
+                  </div>
                 )}
               </SidebarSection>
             </nav>

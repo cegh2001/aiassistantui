@@ -13,10 +13,10 @@ interface ConversationMetadata {
   updatedAt: string
 }
 
-// Interfaz para el archivo de datos
+// Interfaz para el archivo de datos OPTIMIZADO
 interface ConversationData {
-  conversationIds: string[]
-  conversations: Record<string, ConversationMetadata>
+  conversationIds: string[] // Todos los IDs ordenados por recencia
+  recentConversations: Record<string, ConversationMetadata> // Solo metadata de las primeras 10
 }
 
 class ConversationFileStore {
@@ -24,7 +24,7 @@ class ConversationFileStore {
   private filePath: string
   private data: ConversationData = {
     conversationIds: [],
-    conversations: {}
+    recentConversations: {}
   }
   private isInitialized = false
 
@@ -45,13 +45,72 @@ class ConversationFileStore {
 
     try {
       const fileContent = await fs.readFile(this.filePath, 'utf-8')
-      this.data = JSON.parse(fileContent)
+      const loadedData = JSON.parse(fileContent)
+      
+      // Migración de datos: si tiene la estructura vieja, convertir a la nueva
+      if (Array.isArray(loadedData)) {
+        // Estructura vieja: array de conversaciones
+        console.log('📦 Migrando estructura de datos vieja...')
+        this.data = {
+          conversationIds: loadedData.map(c => c.id),
+          recentConversations: {}
+        }
+        
+        // Solo mantener las primeras 10 con metadata
+        const recentConversations = loadedData.slice(0, 10)
+        recentConversations.forEach(conv => {
+          this.data.recentConversations[conv.id] = conv
+        })
+        
+        // Guardar la nueva estructura
+        await this.saveToFile()
+        console.log(`✅ Migración completada: ${this.data.conversationIds.length} IDs, ${Object.keys(this.data.recentConversations).length} con metadata`)
+      } else if (loadedData.conversationIds) {
+        // Estructura intermedia: tiene conversationIds pero puede tener 'conversations' en lugar de 'recentConversations'
+        this.data = {
+          conversationIds: loadedData.conversationIds || [],
+          recentConversations: loadedData.recentConversations || loadedData.conversations || {}
+        }
+        
+        // Si había demasiadas conversaciones con metadata, limitarlas a 10
+        const conversationKeys = Object.keys(this.data.recentConversations)
+        if (conversationKeys.length > 10) {
+          console.log(`📦 Limitando metadata de ${conversationKeys.length} a 10 conversaciones...`)
+          const recentKeys = this.data.conversationIds.slice(0, 10)
+          const newRecentConversations: Record<string, ConversationMetadata> = {}
+          
+          recentKeys.forEach(id => {
+            if (this.data.recentConversations[id]) {
+              newRecentConversations[id] = this.data.recentConversations[id]
+            }
+          })
+          
+          this.data.recentConversations = newRecentConversations
+          await this.saveToFile()
+          console.log(`✅ Optimización completada: ${Object.keys(this.data.recentConversations).length} conversaciones con metadata`)
+        }
+        
+        console.log(`📁 Cargadas ${this.data.conversationIds.length} conversaciones (${Object.keys(this.data.recentConversations).length} con metadata)`)
+      } else {
+        // Archivo corrupto o formato desconocido
+        console.warn('⚠️ Formato de archivo no reconocido, inicializando nuevo')
+        this.data = {
+          conversationIds: [],
+          recentConversations: {}
+        }
+      }
+      
+      // Asegurar que recentConversations existe
+      if (!this.data.recentConversations) {
+        this.data.recentConversations = {}
+      }
+      
     } catch (error) {
       // Si el archivo no existe o hay un error, usar datos por defecto
       console.log('📁 Archivo de conversaciones no encontrado, creando uno nuevo')
       this.data = {
         conversationIds: [],
-        conversations: {}
+        recentConversations: {}
       }
     }
     
@@ -61,6 +120,7 @@ class ConversationFileStore {
   private async saveToFile() {
     try {
       await fs.writeFile(this.filePath, JSON.stringify(this.data, null, 2), 'utf-8')
+      console.log(`💾 Guardadas ${this.data.conversationIds.length} conversaciones`)
     } catch (error) {
       console.error('❌ Error guardando conversaciones en archivo:', error)
     }
@@ -69,13 +129,24 @@ class ConversationFileStore {
   async addConversation(conversation: ConversationMetadata) {
     await this.ensureInitialized()
     
-    // Agregar o actualizar la conversación
-    this.data.conversations[conversation.id] = conversation
-    
     // Agregar ID al inicio si no existe
     if (!this.data.conversationIds.includes(conversation.id)) {
       this.data.conversationIds.unshift(conversation.id)
     }
+    
+    // Solo guardar metadata si está en los primeros 10
+    const recentIds = this.data.conversationIds.slice(0, 10)
+    if (recentIds.includes(conversation.id)) {
+      this.data.recentConversations[conversation.id] = conversation
+    }
+    
+    // Limpiar metadata de conversaciones que ya no están en top 10
+    const keysToRemove = Object.keys(this.data.recentConversations)
+      .filter(id => !recentIds.includes(id))
+    
+    keysToRemove.forEach(id => {
+      delete this.data.recentConversations[id]
+    })
     
     await this.saveToFile()
   }
@@ -84,7 +155,7 @@ class ConversationFileStore {
     await this.ensureInitialized()
     
     this.data.conversationIds = this.data.conversationIds.filter(existingId => existingId !== id)
-    delete this.data.conversations[id]
+    delete this.data.recentConversations[id]
     
     await this.saveToFile()
   }
@@ -92,10 +163,13 @@ class ConversationFileStore {
   async updateConversation(id: string, updates: Partial<ConversationMetadata>) {
     await this.ensureInitialized()
     
-    const existing = this.data.conversations[id]
-    if (!existing) return
+    const existing = this.data.recentConversations[id]
+    if (!existing) {
+      // Si no está en recientes, no actualizar metadata (solo se mantiene en API)
+      return
+    }
 
-    this.data.conversations[id] = {
+    this.data.recentConversations[id] = {
       ...existing,
       ...updates,
       updatedAt: new Date().toISOString()
@@ -111,15 +185,21 @@ class ConversationFileStore {
 
   async getConversationMetadata(id: string): Promise<ConversationMetadata | null> {
     await this.ensureInitialized()
-    return this.data.conversations[id] || null
+    return this.data.recentConversations[id] || null
   }
 
   async getAllConversations(): Promise<ConversationMetadata[]> {
     await this.ensureInitialized()
     
-    return this.data.conversationIds
-      .map(id => this.data.conversations[id])
-      .filter(Boolean)
+    // Verificar que recentConversations existe y es un objeto
+    if (!this.data.recentConversations || typeof this.data.recentConversations !== 'object') {
+      console.warn('⚠️ recentConversations no está definido, inicializando...')
+      this.data.recentConversations = {}
+      return []
+    }
+    
+    // Solo devolver las conversaciones recientes que tienen metadata
+    return Object.values(this.data.recentConversations)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
   }
 
@@ -159,7 +239,7 @@ class ConversationFileStore {
     
     this.data = {
       conversationIds: [],
-      conversations: {}
+      recentConversations: {}
     }
     
     await this.saveToFile()
