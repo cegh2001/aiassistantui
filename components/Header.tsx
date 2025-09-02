@@ -2,6 +2,7 @@
 import { Asterisk, MoreHorizontal, Menu, ChevronDown } from "lucide-react"
 import { useState } from "react"
 import GhostIconButton from "./GhostIconButton"
+import OpenAIStatus from "./OpenAIStatus"
 
 interface ChatBot {
   name: string;
@@ -70,7 +71,8 @@ export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen
         )}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-4">
+        <OpenAIStatus className="hidden md:flex" />
         <GhostIconButton label="More">
           <MoreHorizontal className="h-4 w-4" />
         </GhostIconButton>
