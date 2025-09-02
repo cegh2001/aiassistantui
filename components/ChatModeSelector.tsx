@@ -21,6 +21,7 @@ export default function ChatModeSelector({ mode, onChange, className }: ChatMode
             ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
         )}
+        title="Modo rápido para conversaciones generales con razonamiento mínimo"
       >
         <Zap className="h-4 w-4" />
         Rápido
@@ -33,6 +34,7 @@ export default function ChatModeSelector({ mode, onChange, className }: ChatMode
             ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
         )}
+        title="Modo agente para tareas complejas con razonamiento profundo y herramientas"
       >
         <Bot className="h-4 w-4" />
         Agente
