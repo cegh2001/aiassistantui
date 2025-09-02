@@ -8,29 +8,21 @@ import {
   Plus,
   Star,
   Clock,
-  FolderIcon,
-  FileText,
   Settings,
   Asterisk,
 } from "lucide-react"
 import SidebarSection from "./SidebarSection"
 import ConversationRow from "./ConversationRow"
-import FolderRow from "./FolderRow"
-import TemplateRow from "./TemplateRow"
 import ThemeToggle from "./ThemeToggle"
-import CreateFolderModal from "./CreateFolderModal"
-import CreateTemplateModal from "./CreateTemplateModal"
 import SearchModal from "./SearchModal"
 import SettingsPopover from "./SettingsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
-import { Conversation, Template, Folder } from "@/lib/types/chat"
+import { Conversation } from "@/lib/types/chat"
 
 interface CollapsedState {
   pinned: boolean;
   recent: boolean;
-  folders: boolean;
-  templates: boolean;
 }
 
 interface SidebarProps {
@@ -41,19 +33,13 @@ interface SidebarProps {
   conversations: Conversation[];
   pinned: Conversation[];
   recent: Conversation[];
-  folders: Folder[];
-  folderCounts: { [key: string]: number };
   selectedId: string | null;
   onSelect: (id: string) => void;
   togglePin: (id: string) => void;
   query: string;
   setQuery: (query: string) => void;
   searchRef: React.RefObject<HTMLInputElement | null>;
-  createFolder: (folderName: string) => void;
   createNewChat: () => void;
-  templates?: Template[];
-  setTemplates?: (templates: Template[]) => void;
-  onUseTemplate?: (template: Template) => void;
   sidebarCollapsed?: boolean;
   setSidebarCollapsed?: (collapsed: boolean) => void;
 }
@@ -66,105 +52,24 @@ export default function Sidebar({
   conversations,
   pinned,
   recent,
-  folders,
-  folderCounts,
   selectedId,
   onSelect,
   togglePin,
   query,
   setQuery,
   searchRef,
-  createFolder,
   createNewChat,
-  templates = [],
-  setTemplates = () => {},
-  onUseTemplate = () => {},
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
 }: SidebarProps) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
-  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
-  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false)
-  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null)
   const [showSearchModal, setShowSearchModal] = useState(false)
 
   // Evitar error de hidratación
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const getConversationsByFolder = (folderName: string) => {
-    return conversations.filter((conv) => conv.folder === folderName)
-  }
-
-  const handleCreateFolder = (folderName: string) => {
-    createFolder(folderName)
-  }
-
-  const handleDeleteFolder = (folderName: string) => {
-    const updatedConversations = conversations.map((conv) =>
-      conv.folder === folderName ? { ...conv, folder: null } : conv,
-    )
-    console.log("Delete folder:", folderName, "Updated conversations:", updatedConversations)
-  }
-
-  const handleRenameFolder = (oldName: string, newName: string) => {
-    const updatedConversations = conversations.map((conv) =>
-      conv.folder === oldName ? { ...conv, folder: newName } : conv,
-    )
-    console.log("Rename folder:", oldName, "to", newName, "Updated conversations:", updatedConversations)
-  }
-
-  const handleCreateTemplate = (templateData: Partial<Template> & { name: string; content: string }) => {
-    if (editingTemplate) {
-      const updatedTemplate: Template = {
-        id: editingTemplate.id,
-        name: templateData.name,
-        content: templateData.content,
-        snippet: templateData.snippet || templateData.content.slice(0, 100) + (templateData.content.length > 100 ? "..." : ""),
-        createdAt: editingTemplate.createdAt,
-        updatedAt: templateData.updatedAt || new Date().toISOString(),
-      }
-      const updatedTemplates = templates.map((t) =>
-        t.id === editingTemplate.id ? updatedTemplate : t,
-      )
-      setTemplates(updatedTemplates)
-      setEditingTemplate(null)
-    } else {
-      const newTemplate: Template = {
-        id: Date.now().toString(),
-        name: templateData.name,
-        content: templateData.content,
-        snippet: templateData.snippet || templateData.content.slice(0, 100) + (templateData.content.length > 100 ? "..." : ""),
-        createdAt: templateData.createdAt || new Date().toISOString(),
-        updatedAt: templateData.updatedAt || new Date().toISOString(),
-      }
-      setTemplates([...templates, newTemplate])
-    }
-    setShowCreateTemplateModal(false)
-  }
-
-  const handleEditTemplate = (template: Template) => {
-    setEditingTemplate(template)
-    setShowCreateTemplateModal(true)
-  }
-
-  const handleRenameTemplate = (templateId: string, newName: string) => {
-    const updatedTemplates = templates.map((t) =>
-      t.id === templateId ? { ...t, name: newName, updatedAt: new Date().toISOString() } : t,
-    )
-    setTemplates(updatedTemplates)
-  }
-
-  const handleDeleteTemplate = (templateId: string) => {
-    const updatedTemplates = templates.filter((t) => t.id !== templateId)
-    setTemplates(updatedTemplates)
-  }
-
-  const handleUseTemplate = (template: Template) => {
-    onUseTemplate(template)
-  }
 
   if (sidebarCollapsed) {
     return (
@@ -200,13 +105,6 @@ export default function Sidebar({
             title="Search"
           >
             <SearchIcon className="h-5 w-5" />
-          </button>
-
-          <button
-            className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-            title="Folders"
-          >
-            <FolderIcon className="h-5 w-5" />
           </button>
 
           <div className="mt-auto mb-4">
@@ -357,69 +255,6 @@ export default function Sidebar({
                   ))
                 )}
               </SidebarSection>
-
-              <SidebarSection
-                icon={<FolderIcon className="h-4 w-4" />}
-                title={t('folders').toUpperCase()}
-                collapsed={collapsed.folders}
-                onToggle={() => setCollapsed({ ...collapsed, folders: !collapsed.folders })}
-              >
-                <div className="-mx-1">
-                  <button
-                    onClick={() => setShowCreateFolderModal(true)}
-                    className="mb-2 inline-flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  >
-                    <Plus className="h-4 w-4" /> {t('newFolder')}
-                  </button>
-
-                  {folders.map((f) => (
-                    <FolderRow
-                      key={f.id}
-                      name={f.name}
-                      count={folderCounts[f.name] || 0}
-                      conversations={getConversationsByFolder(f.name)}
-                      selectedId={selectedId}
-                      onSelect={onSelect}
-                      togglePin={togglePin}
-                      onDeleteFolder={handleDeleteFolder}
-                      onRenameFolder={handleRenameFolder}
-                    />
-                  ))}
-                </div>
-              </SidebarSection>
-
-              <SidebarSection
-                icon={<FileText className="h-4 w-4" />}
-                title={t('templates').toUpperCase()}
-                collapsed={collapsed.templates}
-                onToggle={() => setCollapsed({ ...collapsed, templates: !collapsed.templates })}
-              >
-                <div className="-mx-1">
-                  <button
-                    onClick={() => setShowCreateTemplateModal(true)}
-                    className="mb-2 inline-flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
-                  >
-                    <Plus className="h-4 w-4" /> {t('createTemplate')}
-                  </button>
-
-                  {(Array.isArray(templates) ? templates : []).map((template) => (
-                    <TemplateRow
-                      key={template.id}
-                      template={template}
-                      onUseTemplate={handleUseTemplate}
-                      onEditTemplate={handleEditTemplate}
-                      onRenameTemplate={handleRenameTemplate}
-                      onDeleteTemplate={handleDeleteTemplate}
-                    />
-                  ))}
-
-                  {(!templates || templates.length === 0) && (
-                    <div className="select-none rounded-lg border border-dashed border-zinc-200 px-3 py-3 text-center text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                      No templates yet. Create your first prompt template.
-                    </div>
-                  )}
-                </div>
-              </SidebarSection>
             </nav>
 
             <div className="mt-auto border-t border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
@@ -446,22 +281,6 @@ export default function Sidebar({
           </motion.aside>
         )}
       </AnimatePresence>
-
-      <CreateFolderModal
-        isOpen={showCreateFolderModal}
-        onClose={() => setShowCreateFolderModal(false)}
-        onCreateFolder={handleCreateFolder}
-      />
-
-      <CreateTemplateModal
-        isOpen={showCreateTemplateModal}
-        onClose={() => {
-          setShowCreateTemplateModal(false)
-          setEditingTemplate(null)
-        }}
-        onCreateTemplate={handleCreateTemplate}
-        editingTemplate={editingTemplate}
-      />
 
       <SearchModal
         isOpen={showSearchModal}
