@@ -204,15 +204,6 @@ export class OpenAIService {
     try {
       console.log(`💬 Usando Conversación: ${conversationId}`)
 
-      // Agregar el mensaje del usuario a la conversación
-      await client.conversations.items.create(conversationId, {
-        items: [{
-          type: "message",
-          role: "user",
-          content: [{ type: "input_text", text: input }]
-        }]
-      })
-
       // Preparar el input procesado
       const processedInput = PromptProcessor.processInput(input, effectiveMode, needsDatabaseTools || false)
 
@@ -222,7 +213,9 @@ export class OpenAIService {
         processedInput,
         effectiveMode,
         verbosity,
-        maxOutputTokens
+        maxOutputTokens,
+        undefined, // previousResponseId
+        conversationId // Pasar conversationId para mantener contexto
       )
 
       // Agregar herramientas MCP si son necesarias
@@ -255,8 +248,9 @@ export class OpenAIService {
 
       const finalContent = toolProcessingResult?.content || response.output_text || ''
 
-      // Agregar la respuesta del asistente a la conversación usando Conversations API
-      if (finalContent) {
+      // Si hay herramientas MCP procesadas, agregar manualmente el resultado a la conversación
+      // porque el Responses API no maneja tool outputs automáticamente con conversation_id
+      if (toolProcessingResult && finalContent) {
         await client.conversations.items.create(conversationId, {
           items: [{
             type: 'message',
@@ -264,10 +258,52 @@ export class OpenAIService {
             content: finalContent
           }]
         })
-        console.log('✅ Respuesta del asistente agregada a conversación:', conversationId)
+        console.log('✅ Resultado de herramientas MCP agregado a conversación:', conversationId)
       }
 
       console.log('✅ Respuesta generada para conversación:', conversationId)
+
+      // Actualizar metadata después de la respuesta
+      const { ConversationService } = await import('./conversations')
+      const conversationService = ConversationService.getInstance()
+      
+      // Obtener todos los mensajes para actualizar metadata
+      const allMessages = await conversationService.getMessages(conversationId)
+      const messageCount = allMessages.length
+      
+      // Usar el último mensaje como preview
+      const lastMessage = allMessages[allMessages.length - 1]
+      const preview = lastMessage ? lastMessage.content.slice(0, 80) : ''
+      
+      // Si es el primer intercambio (2 mensajes), generar título inteligente del primer mensaje de usuario
+      const currentConversation = await conversationService.getConversation(conversationId)
+      let title = currentConversation?.title || 'Nueva conversación'
+      if (messageCount === 2) {
+        const firstUserMessage = allMessages.find(msg => msg.role === 'user')
+        if (firstUserMessage) {
+          // Generar título simple basado en el primer mensaje
+          title = firstUserMessage.content
+            .trim()
+            .slice(0, 50)
+            .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ]/g, '')
+            .split(' ')
+            .slice(0, 6)
+            .join(' ')
+            .trim() || 'Nueva conversación'
+        }
+      }
+
+      await conversationService.updateConversation(conversationId, {
+        metadata: {
+          ...currentConversation?.metadata,
+          messageCount: messageCount.toString(),
+          preview,
+          title,
+          updatedAt: new Date().toISOString()
+        }
+      })
+
+      console.log('✅ Metadata actualizada para conversación:', conversationId)
 
       if (toolProcessingResult) {
         return ResponseProcessor.createResponse(

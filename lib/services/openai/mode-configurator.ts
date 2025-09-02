@@ -38,7 +38,8 @@ export class ModeConfigurator {
     effectiveMode: ChatMode,
     verbosity: VerbosityLevel | undefined,
     maxOutputTokens?: number,
-    previousResponseId?: string
+    previousResponseId?: string,
+    conversationId?: string
   ): any {
     const modeConfig = this.getModeConfig(effectiveMode)
     
@@ -59,6 +60,11 @@ export class ModeConfigurator {
 
     if (previousResponseId) {
       requestBody.previous_response_id = previousResponseId
+    }
+
+    // Incluir conversation_id para mantener contexto
+    if (conversationId) {
+      requestBody.conversation = conversationId
     }
 
     return requestBody
@@ -93,7 +99,8 @@ export class ModeConfigurator {
       reasoning_effort: requestBody.reasoning.effort,
       verbosity: requestBody.text.verbosity,
       has_tools: !!requestBody.tools,
-      tools_count: requestBody.tools?.length || 0
+      tools_count: requestBody.tools?.length || 0,
+      conversation_id: requestBody.conversation || 'none'
     })
   }
 }

@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import type { Conversation, Message, ConversationItem } from '@/lib/types/chat'
+import type { Conversation, Message } from '@/lib/types/chat'
 import ConversationFileStore from '@/lib/stores/conversation-file-store'
 
 // Cliente OpenAI configurado
