@@ -5,18 +5,22 @@ import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
 import ChatPanel from "./ChatPanel"
+import ChatModeSelector from "./ChatModeSelector"
 import GhostIconButton from "./GhostIconButton"
 import ThemeToggle from "./ThemeToggle"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { useChat } from "@/lib/hooks/useChat"
+import { useChatMode } from "@/lib/hooks/useChatMode"
 import { 
   INITIAL_CONVERSATIONS, 
   INITIAL_TEMPLATES, 
-  INITIAL_FOLDERS, 
+  INITIAL_FOLDERS
+} from "@/lib/data/mockData"
+import { 
   type Conversation, 
   type Template, 
   type Folder 
-} from "@/lib/data/mockData"
+} from "@/lib/types/chat"
 
 interface CollapsedState {
   pinned: boolean
@@ -28,8 +32,9 @@ interface CollapsedState {
 export default function AIAssistantUI() {
   const { t } = useLanguage()
   
-  // Hook para el chat con OpenAI
-  const { sendConversation, isLoading: isAiThinking, error: chatError } = useChat({
+  // Hooks para el chat con OpenAI
+  const { mode, setMode } = useChatMode()
+  const { sendMessage: sendToOpenAI, isLoading: isAiThinking, error: chatError } = useChat({
     onSuccess: (response) => {
       console.log('Respuesta de OpenAI recibida:', response)
     },
@@ -174,36 +179,22 @@ export default function AIAssistantUI() {
     setIsThinking(true)
     setThinkingConvId(convId)
 
-    // Obtener la conversación actual para enviar a OpenAI
-    const currentConv = conversations.find(c => c.id === convId)
-    const messagesForAI = [
-      ...(currentConv?.messages || []),
-      userMsg
-    ].map(msg => ({
-      role: msg.role,
-      content: msg.content,
-      id: msg.id,
-      createdAt: msg.createdAt
-    }))
-
-    // Enviar a OpenAI
-    sendConversation(messagesForAI, { 
-      model: 'gpt-5',
-      reasoningEffort: 'medium',
-      verbosity: 'medium'
-    }).then((response) => {
+    // Enviar a OpenAI con el modo seleccionado
+    sendToOpenAI(content, { 
+      mode: mode
+    }).then((response: any) => {
       setIsThinking(false)
       setThinkingConvId(null)
       
       if (response) {
-        // Agregar la respuesta de la IA
         const assistantMsg = {
           id: response.id || Math.random().toString(36).slice(2),
           role: "assistant" as const,
           content: response.content,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date().toISOString()
         }
 
+        // Agregar la respuesta del asistente
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== convId) return c
@@ -211,46 +202,24 @@ export default function AIAssistantUI() {
             return {
               ...c,
               messages: msgs,
-              updatedAt: new Date().toISOString(),
+              updatedAt: assistantMsg.createdAt,
               messageCount: msgs.length,
-              preview: assistantMsg.content.slice(0, 80),
-            }
-          }),
-        )
-      } else {
-        // Si hay error, mostrar mensaje de error
-        const errorMsg = {
-          id: Math.random().toString(36).slice(2),
-          role: "assistant" as const,
-          content: chatError || "Lo siento, hubo un error al procesar tu mensaje. Por favor, intenta de nuevo.",
-          createdAt: new Date().toISOString(),
-        }
-
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id !== convId) return c
-            const msgs = [...(c.messages || []), errorMsg]
-            return {
-              ...c,
-              messages: msgs,
-              updatedAt: new Date().toISOString(),
-              messageCount: msgs.length,
-              preview: errorMsg.content.slice(0, 80),
+              preview: response.content.slice(0, 80),
             }
           }),
         )
       }
-    }).catch((error) => {
-      console.error('Error enviando mensaje:', error)
+    }).catch((error: any) => {
       setIsThinking(false)
       setThinkingConvId(null)
+      console.error('Error enviando mensaje:', error)
       
-      // Mostrar mensaje de error
+      // Agregar mensaje de error
       const errorMsg = {
         id: Math.random().toString(36).slice(2),
         role: "assistant" as const,
-        content: "Lo siento, hubo un error al conectar con el servicio de IA. Por favor, verifica tu configuración y intenta de nuevo.",
-        createdAt: new Date().toISOString(),
+        content: `Error: ${error.message || 'No se pudo procesar el mensaje'}`,
+        createdAt: new Date().toISOString()
       }
 
       setConversations((prev) =>
@@ -260,9 +229,8 @@ export default function AIAssistantUI() {
           return {
             ...c,
             messages: msgs,
-            updatedAt: new Date().toISOString(),
+            updatedAt: errorMsg.createdAt,
             messageCount: msgs.length,
-            preview: errorMsg.content.slice(0, 80),
           }
         }),
       )
@@ -361,7 +329,9 @@ export default function AIAssistantUI() {
           <Header 
             createNewChat={createNewChat} 
             sidebarCollapsed={sidebarCollapsed} 
-            setSidebarOpen={setSidebarOpen} 
+            setSidebarOpen={setSidebarOpen}
+            chatMode={mode}
+            onModeChange={setMode}
           />
           <ChatPanel
             ref={chatPanelRef}

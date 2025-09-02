@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { FileText, MoreHorizontal, Copy, Edit3, Trash2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Template } from "@/lib/data/mockData"
+import { Template } from "@/lib/types/chat"
 
 interface TemplateRowProps {
   template: Template;

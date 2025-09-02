@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { X, SearchIcon, Plus, Clock } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
-import { Conversation } from "@/lib/data/mockData"
+import { Conversation } from "@/lib/types/chat"
 
 interface SearchModalProps {
   isOpen: boolean;

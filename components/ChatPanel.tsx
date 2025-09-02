@@ -6,7 +6,7 @@ import Message from "./Message"
 import Composer from "./Composer"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls, timeAgo } from "@/lib/utils/helpers"
-import { Conversation, Message as MessageType } from "@/lib/data/mockData"
+import { Conversation, Message as MessageType } from "@/lib/types/chat"
 
 interface ThinkingMessageProps {
   onPause: () => void;

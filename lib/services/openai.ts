@@ -23,8 +23,11 @@ export interface ChatResponse {
   }
 }
 
+export type ChatMode = 'fast' | 'agent'
+
 export interface ChatOptions {
   model?: 'gpt-5' | 'gpt-5-mini' | 'gpt-5-nano'
+  mode?: ChatMode
   reasoningEffort?: 'minimal' | 'low' | 'medium' | 'high'
   verbosity?: 'low' | 'medium' | 'high'
   maxOutputTokens?: number
@@ -44,6 +47,29 @@ export class OpenAIService {
   }
 
   /**
+   * Obtiene la configuración basada en el modo
+   */
+  private getModeConfig(mode: ChatMode) {
+    switch (mode) {
+      case 'fast':
+        return {
+          reasoningEffort: 'low' as const,
+          verbosity: 'low' as const
+        }
+      case 'agent':
+        return {
+          reasoningEffort: 'high' as const,
+          verbosity: 'medium' as const
+        }
+      default:
+        return {
+          reasoningEffort: 'medium' as const,
+          verbosity: 'medium' as const
+        }
+    }
+  }
+
+  /**
    * Envía un mensaje usando GPT-5 con la Responses API
    */
   async sendMessage(
@@ -53,20 +79,24 @@ export class OpenAIService {
     try {
       const {
         model = 'gpt-5',
-        reasoningEffort = 'medium',
-        verbosity = 'medium',
+        mode = 'fast',
+        reasoningEffort,
+        verbosity,
         maxOutputTokens = 4000,
         previousResponseId
       } = options
 
+      // Configuración basada en el modo
+      const modeConfig = this.getModeConfig(mode)
+      
       const requestBody: any = {
         model,
         input,
         reasoning: {
-          effort: reasoningEffort
+          effort: reasoningEffort || modeConfig.reasoningEffort
         },
         text: {
-          verbosity: verbosity
+          verbosity: verbosity || modeConfig.verbosity
         }
       }
 

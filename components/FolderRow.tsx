@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { FolderIcon, ChevronRight, ChevronDown, MoreHorizontal } from "lucide-react"
 import ConversationRow from "./ConversationRow"
 import { motion, AnimatePresence } from "framer-motion"
-import { Conversation } from "@/lib/data/mockData"
+import { Conversation } from "@/lib/types/chat"
 
 interface FolderRowProps {
   name: string;

@@ -24,7 +24,7 @@ import SearchModal from "./SearchModal"
 import SettingsPopover from "./SettingsPopover"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls } from "@/lib/utils/helpers"
-import { Conversation, Template, Folder } from "@/lib/data/mockData"
+import { Conversation, Template, Folder } from "@/lib/types/chat"
 
 interface CollapsedState {
   pinned: boolean;

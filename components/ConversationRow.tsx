@@ -2,7 +2,7 @@ import React from "react";
 import { Star } from "lucide-react";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { cls, timeAgo } from "@/lib/utils/helpers";
-import { Conversation } from "@/lib/data/mockData";
+import { Conversation } from "@/lib/types/chat";
 
 interface ConversationRowProps {
   data: Conversation;

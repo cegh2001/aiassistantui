@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import { X, Lightbulb } from "lucide-react"
 import { useState, useEffect } from "react"
-import { Template } from "@/lib/data/mockData"
+import { Template } from "@/lib/types/chat"
 
 interface CreateTemplateModalProps {
   isOpen: boolean;
