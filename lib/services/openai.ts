@@ -70,6 +70,20 @@ export class OpenAIService {
   }
 
   /**
+   * Detecta si un mensaje requiere uso del agente MCP
+   */
+  private shouldUseMCPAgent(input: string): boolean {
+    const mcpKeywords = [
+      'base de datos', 'database', 'sql', 'consulta', 'query', 'tabla', 'table',
+      'mysql', 'select', 'insert', 'update', 'delete', 'show tables',
+      'describe', 'estadísticas', 'stats', 'información', 'info'
+    ]
+    
+    const inputLower = input.toLowerCase()
+    return mcpKeywords.some(keyword => inputLower.includes(keyword))
+  }
+
+  /**
    * Envía un mensaje usando GPT-5 con la Responses API
    */
   async sendMessage(
@@ -85,6 +99,30 @@ export class OpenAIService {
         maxOutputTokens = 4000,
         previousResponseId
       } = options
+
+      // Si está en modo agente y el mensaje parece requerir base de datos, usar MCP
+      if (mode === 'agent' && this.shouldUseMCPAgent(input)) {
+        try {
+          // Importación dinámica para evitar problemas de SSR
+          const { runDatabaseAgent } = await import('./agent')
+          
+          const agentResponse = await runDatabaseAgent(input, {}, mode)
+          
+          return {
+            id: `agent_${Date.now()}`,
+            content: agentResponse.content,
+            reasoning: agentResponse.reasoning,
+            usage: {
+              input_tokens: input.length, // Aproximación
+              output_tokens: agentResponse.content.length, // Aproximación
+              total_tokens: input.length + agentResponse.content.length
+            }
+          }
+        } catch (agentError) {
+          console.warn('Agent MCP failed, falling back to regular GPT-5:', agentError)
+          // Continuar con el flujo normal si el agente falla
+        }
+      }
 
       // Configuración basada en el modo
       const modeConfig = this.getModeConfig(mode)
