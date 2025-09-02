@@ -13,7 +13,8 @@ import type {
   ChatMessage, 
   ChatResponse, 
   ChatMode, 
-  ChatOptions 
+  ChatOptions,
+  VerbosityLevel 
 } from './openai/types'
 
 // Re-exportar tipos para compatibilidad
@@ -38,6 +39,7 @@ export class OpenAIService {
 
   /**
    * Envía un mensaje usando GPT-5 con Responses API y razonamiento adaptativo
+   * Ahora integrado con OpenAI Conversations API
    */
   async sendMessage(
     input: string,
@@ -50,6 +52,7 @@ export class OpenAIService {
         reasoningEffort,
         verbosity,
         maxOutputTokens = DEFAULT_CONFIG.MAX_OUTPUT_TOKENS,
+        conversationId,
         previousResponseId
       } = options
 
@@ -66,8 +69,22 @@ export class OpenAIService {
           input: input.substring(0, 100) + '...',
           needsDatabaseTools,
           effectiveMode,
-          reasoningEffort: reasoningEffort || modeConfig.reasoningEffort
+          reasoningEffort: reasoningEffort || modeConfig.reasoningEffort,
+          conversationId
         })
+      }
+
+      // Si tenemos conversationId, usar la API de conversaciones
+      if (conversationId) {
+        return await this.sendMessageWithConversation(
+          input,
+          conversationId,
+          model,
+          effectiveMode,
+          verbosity,
+          maxOutputTokens,
+          needsDatabaseTools
+        )
       }
 
       // Preparar el input según el modo y herramientas detectadas usando módulos refactorizados
@@ -75,7 +92,7 @@ export class OpenAIService {
 
       // Usar Responses API exclusivamente
       const apiMode = PromptProcessor.getApiModeDescription(effectiveMode, needsDatabaseTools)
-      console.log(`� Usando Responses API - Modo: ${apiMode}`)
+      console.log(`🚀 Usando Responses API - Modo: ${apiMode}`)
       
       const requestBody = ModeConfigurator.buildRequestBody(
         model,
@@ -109,6 +126,7 @@ export class OpenAIService {
         return ResponseProcessor.createResponse(
           response,
           toolProcessingResult.content,
+          undefined,
           undefined
         )
       }
@@ -141,6 +159,7 @@ export class OpenAIService {
           return ResponseProcessor.createResponse(
             fallbackResponse,
             fallbackResponse.output_text || 'No se pudo obtener respuesta',
+            undefined,
             undefined
           )
         }
@@ -152,6 +171,7 @@ export class OpenAIService {
       return ResponseProcessor.createResponse(
         response,
         response.output_text || '',
+        undefined,
         undefined
       )
     } catch (error) {
@@ -170,21 +190,159 @@ export class OpenAIService {
   }
 
   /**
-   * Envía una conversación completa usando GPT-5 
+   * Envía un mensaje usando una conversación existente
+   */
+  private async sendMessageWithConversation(
+    input: string,
+    conversationId: string,
+    model: string,
+    effectiveMode: ChatMode,
+    verbosity?: VerbosityLevel,
+    maxOutputTokens?: number,
+    needsDatabaseTools?: boolean
+  ): Promise<ChatResponse> {
+    try {
+      console.log(`💬 Usando Conversación: ${conversationId}`)
+
+      // Agregar el mensaje del usuario a la conversación
+      await client.conversations.items.create(conversationId, {
+        items: [{
+          type: "message",
+          role: "user",
+          content: [{ type: "input_text", text: input }]
+        }]
+      })
+
+      // Preparar el input procesado
+      const processedInput = PromptProcessor.processInput(input, effectiveMode, needsDatabaseTools || false)
+
+      // Crear la respuesta usando la conversación
+      const requestBody = ModeConfigurator.buildRequestBody(
+        model,
+        processedInput,
+        effectiveMode,
+        verbosity,
+        maxOutputTokens
+      )
+
+      // Agregar herramientas MCP si son necesarias
+      ModeConfigurator.addMCPToolsIfNeeded(
+        requestBody, 
+        needsDatabaseTools || false, 
+        () => MCPToolHandler.getDatabaseTools()
+      )
+
+      console.log('📤 Enviando con conversación:', {
+        conversationId,
+        mode: effectiveMode,
+        hasTools: needsDatabaseTools
+      })
+
+      // Generar respuesta usando Responses API (sin conversation_id)
+      const response = await client.responses.create(requestBody)
+
+      console.log('📥 Respuesta de conversación:', {
+        id: response.id,
+        usage: response.usage,
+        output_length: response.output_text?.length || 0
+      })
+
+      // Procesar respuesta con herramientas MCP
+      const toolProcessingResult = await ResponseProcessor.processResponseWithTools(
+        response, 
+        needsDatabaseTools || false
+      )
+
+      const finalContent = toolProcessingResult?.content || response.output_text || ''
+
+      // Agregar la respuesta del asistente a la conversación usando Conversations API
+      if (finalContent) {
+        await client.conversations.items.create(conversationId, {
+          items: [{
+            type: 'message',
+            role: 'assistant',
+            content: finalContent
+          }]
+        })
+        console.log('✅ Respuesta del asistente agregada a conversación:', conversationId)
+      }
+
+      console.log('✅ Respuesta generada para conversación:', conversationId)
+
+      if (toolProcessingResult) {
+        return ResponseProcessor.createResponse(
+          response,
+          toolProcessingResult.content,
+          conversationId
+        )
+      }
+
+      return ResponseProcessor.createResponse(
+        response,
+        finalContent,
+        conversationId
+      )
+
+    } catch (error) {
+      console.error('❌ Error en conversación:', error)
+      throw new Error(`Error en conversación: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+    }
+  }
+
+  /**
+   * Envía una conversación completa usando OpenAI Conversations API
    */
   async sendConversation(
     messages: ChatMessage[],
     options: ChatOptions = {}
   ): Promise<ChatResponse> {
     try {
-      // Convertir mensajes a formato de input para GPT-5
-      const conversationText = messages
-        .map(msg => `${msg.role}: ${msg.content}`)
-        .join('\n\n')
+      const { conversationId, ...restOptions } = options
 
-      const input = `Previous conversation:\n${conversationText}\n\nPlease respond as the assistant.`
+      if (conversationId) {
+        // Si ya tenemos una conversación, usar el último mensaje
+        const lastMessage = messages[messages.length - 1]
+        if (lastMessage && lastMessage.role === 'user') {
+          return await this.sendMessage(lastMessage.content, {
+            ...restOptions,
+            conversationId
+          })
+        }
+      }
 
-      return await this.sendMessage(input, options)
+      // Si no hay conversationId, crear una nueva conversación
+      const { ConversationService } = await import('./conversations')
+      const conversationService = ConversationService.getInstance()
+      
+      // Crear nueva conversación con el primer mensaje
+      const firstUserMessage = messages.find(msg => msg.role === 'user')
+      const newConversationId = await conversationService.createConversation(
+        undefined,
+        firstUserMessage?.content
+      )
+
+      // Agregar todos los mensajes a la conversación
+      for (const message of messages) {
+        if (message.role === 'user') {
+          await conversationService.addMessage(newConversationId, {
+            id: message.id || `msg_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            role: message.role,
+            content: message.content,
+            createdAt: message.createdAt || new Date().toISOString()
+          })
+        }
+      }
+
+      // Enviar el último mensaje de usuario
+      const lastUserMessage = messages.filter(msg => msg.role === 'user').pop()
+      if (lastUserMessage) {
+        return await this.sendMessage(lastUserMessage.content, {
+          ...restOptions,
+          conversationId: newConversationId
+        })
+      }
+
+      throw new Error('No se encontró mensaje de usuario en la conversación')
     } catch (error) {
       console.error('Error sending conversation to OpenAI:', error)
       throw new Error(`OpenAI conversation error: ${error instanceof Error ? error.message : 'Unknown error'}`)

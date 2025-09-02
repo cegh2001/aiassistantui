@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import ConversationService from '@/lib/services/conversations'
+import ConversationClientService from '@/lib/services/conversations-client'
 import type { Conversation, Message } from '@/lib/types/chat'
 
 export interface UseConversationsOptions {
@@ -22,7 +22,6 @@ export interface UseConversationsReturn {
   
   // Operaciones de mensajes
   addMessage: (conversationId: string, message: Message) => Promise<void>
-  updateMessage: (conversationId: string, messageId: string, content: string) => Promise<void>
   
   // Utilidades
   refreshConversations: () => Promise<void>
@@ -42,7 +41,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const conversationService = ConversationService.getInstance()
+  const conversationService = ConversationClientService.getInstance()
 
   // Cargar conversaciones
   const loadConversations = useCallback(async () => {
@@ -110,7 +109,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       
       // Actualizar conversación seleccionada si es la misma
       if (selectedConversation?.id === id) {
-        setSelectedConversation(prev => prev ? { ...prev, title } : null)
+        setSelectedConversation(prev => prev ? { 
+          ...prev, 
+          title,
+          metadata: { ...prev.metadata, title }
+        } : null)
       }
       
       await loadConversations()
@@ -128,7 +131,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       
       // Actualizar conversación seleccionada si es la misma
       if (selectedConversation?.id === id) {
-        setSelectedConversation(prev => prev ? { ...prev, folder } : null)
+        setSelectedConversation(prev => prev ? { 
+          ...prev, 
+          folder,
+          metadata: { ...prev.metadata, folder }
+        } : null)
       }
       
       await loadConversations()
@@ -146,7 +153,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       
       // Actualizar conversación seleccionada si es la misma
       if (selectedConversation?.id === id) {
-        setSelectedConversation(prev => prev ? { ...prev, pinned: !prev.pinned } : null)
+        setSelectedConversation(prev => prev ? { 
+          ...prev, 
+          pinned: !prev.pinned,
+          metadata: { ...prev.metadata, pinned: (!prev.pinned).toString() }
+        } : null)
       }
       
       await loadConversations()
@@ -162,38 +173,30 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     try {
       await conversationService.addMessage(conversationId, message)
       
-      // Actualizar conversación seleccionada si es la misma
+      // Actualizar conversación seleccionada si es la misma, SIN refrescar desde servidor
       if (selectedConversation?.id === conversationId) {
-        const updatedConversation = await conversationService.getConversation(conversationId)
-        setSelectedConversation(updatedConversation)
+        setSelectedConversation(prev => {
+          if (!prev) return null
+          
+          const updatedMessages = [...(prev.messages || []), message]
+          return {
+            ...prev,
+            messages: updatedMessages,
+            messageCount: updatedMessages.length,
+            updatedAt: message.createdAt,
+            preview: message.content.slice(0, 80)
+          }
+        })
       }
       
+      // Solo refrescar la lista de conversaciones, no la conversación actual
       await loadConversations()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error agregando mensaje'
       setError(errorMessage)
       throw err
     }
-  }, [conversationService, loadConversations, selectedConversation])
-
-  // Actualizar mensaje
-  const updateMessage = useCallback(async (conversationId: string, messageId: string, content: string) => {
-    try {
-      await conversationService.updateMessage(conversationId, messageId, content)
-      
-      // Actualizar conversación seleccionada si es la misma
-      if (selectedConversation?.id === conversationId) {
-        const updatedConversation = await conversationService.getConversation(conversationId)
-        setSelectedConversation(updatedConversation)
-      }
-      
-      await loadConversations()
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error actualizando mensaje'
-      setError(errorMessage)
-      throw err
-    }
-  }, [conversationService, loadConversations, selectedConversation])
+  }, [conversationService, selectedConversation, loadConversations])
 
   // Obtener conversaciones filtradas
   const getFilteredConversations = useCallback((filter: {
@@ -211,22 +214,24 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
 
     // Filtrar por carpeta
     if (filter.folder) {
-      filtered = filtered.filter(c => c.folder === filter.folder)
+      filtered = filtered.filter(c => (c.folder || 'General') === filter.folder)
     }
 
     // Filtrar por búsqueda
     if (filter.search) {
       const search = filter.search.toLowerCase()
       filtered = filtered.filter(c => 
-        c.title.toLowerCase().includes(search) ||
-        c.preview.toLowerCase().includes(search)
+        (c.title || '').toLowerCase().includes(search) ||
+        (c.preview || '').toLowerCase().includes(search)
       )
     }
 
     // Ordenar por fecha de actualización
-    filtered.sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-    )
+    filtered.sort((a, b) => {
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : a.created_at * 1000
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : b.created_at * 1000
+      return bTime - aTime
+    })
 
     // Limitar resultados
     if (filter.limit) {
@@ -257,7 +262,6 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     toggleConversationPin,
     
     addMessage,
-    updateMessage,
     
     refreshConversations: loadConversations,
     getFilteredConversations

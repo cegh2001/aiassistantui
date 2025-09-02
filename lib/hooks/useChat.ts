@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { type ChatMessage, type ChatOptions, type ChatResponse } from '@/lib/services/openai'
 
 interface UseChatOptions {
+  conversationId?: string // Para enviar mensajes en una conversación específica
   onSuccess?: (response: ChatResponse) => void
   onError?: (error: string) => void
 }
@@ -32,6 +33,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setError(null)
 
     try {
+      // Combinar conversationId de las opciones del hook con las opciones del chat
+      const finalOptions = {
+        ...chatOptions,
+        conversationId: chatOptions?.conversationId || options.conversationId
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -39,7 +46,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         },
         body: JSON.stringify({
           message,
-          options: chatOptions
+          options: finalOptions
         }),
       })
 
@@ -78,6 +85,12 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setError(null)
 
     try {
+      // Combinar conversationId de las opciones del hook con las opciones del chat
+      const finalOptions = {
+        ...chatOptions,
+        conversationId: chatOptions?.conversationId || options.conversationId
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -85,7 +98,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         },
         body: JSON.stringify({
           messages,
-          options: chatOptions
+          options: finalOptions
         }),
       })
 

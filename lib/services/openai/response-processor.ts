@@ -78,12 +78,14 @@ export class ResponseProcessor {
   static createResponse(
     response: any,
     content: string,
+    conversationId?: string,
     reasoning?: string
   ) {
     return {
       id: response.id || `responses_${Date.now()}`,
       content,
       reasoning,
+      conversationId,
       usage: {
         input_tokens: response.usage?.input_tokens,
         output_tokens: response.usage?.output_tokens || 0,

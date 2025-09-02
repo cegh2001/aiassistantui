@@ -43,7 +43,6 @@ export default function AIAssistantUI() {
     updateConversationTitle,
     toggleConversationPin,
     addMessage,
-    updateMessage,
     getFilteredConversations
   } = useConversations()
 
@@ -141,37 +140,30 @@ export default function AIAssistantUI() {
 
   async function sendMessage(convId: string, content: string) {
     if (!content.trim()) return
-    const now = new Date().toISOString()
-    const userMsg = { 
-      id: Math.random().toString(36).slice(2), 
-      role: "user" as const, 
-      content, 
-      createdAt: now 
+    
+    // Prevenir envíos duplicados si ya está procesando
+    if (isThinking && thinkingConvId === convId) {
+      console.log('⚠️ Ya hay un mensaje en proceso para esta conversación')
+      return
     }
 
     try {
-      // Agregar mensaje del usuario inmediatamente
-      await addMessage(convId, userMsg)
-
       setIsThinking(true)
       setThinkingConvId(convId)
 
-      // Enviar a OpenAI con el modo seleccionado
-      const response = await sendToOpenAI(content, { mode: mode })
+      // Enviar a OpenAI con el modo seleccionado y el conversationId
+      // El backend se encarga de agregar tanto el mensaje del usuario como la respuesta
+      const response = await sendToOpenAI(content, { 
+        mode: mode,
+        conversationId: convId
+      })
       
       setIsThinking(false)
       setThinkingConvId(null)
       
       if (response) {
-        const assistantMsg = {
-          id: response.id || Math.random().toString(36).slice(2),
-          role: "assistant" as const,
-          content: response.content,
-          createdAt: new Date().toISOString()
-        }
-
-        // Agregar la respuesta del asistente
-        await addMessage(convId, assistantMsg)
+        // Refrescar la conversación para mostrar los nuevos mensajes
+        await selectConversation(convId)
       }
     } catch (error: any) {
       setIsThinking(false)
@@ -188,6 +180,8 @@ export default function AIAssistantUI() {
 
       try {
         await addMessage(convId, errorMsg)
+        // NO refrescar la conversación aquí tampoco
+        // await selectConversation(convId)
       } catch (addError) {
         console.error('Error agregando mensaje de error:', addError)
       }
@@ -196,7 +190,8 @@ export default function AIAssistantUI() {
 
   async function editMessage(convId: string, messageId: string, newContent: string) {
     try {
-      await updateMessage(convId, messageId, newContent)
+      // TODO: Implementar edición de mensajes con la API de OpenAI
+      console.warn('La edición de mensajes no está implementada todavía')
     } catch (error) {
       console.error('Error editando mensaje:', error)
     }

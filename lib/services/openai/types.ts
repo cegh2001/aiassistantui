@@ -13,6 +13,7 @@ export interface ChatResponse {
   id: string
   content: string
   reasoning?: string
+  conversationId?: string // ID de la conversación en OpenAI
   usage?: {
     input_tokens?: number
     output_tokens?: number
@@ -34,6 +35,7 @@ export interface ChatOptions {
   reasoningEffort?: ReasoningEffort
   verbosity?: VerbosityLevel
   maxOutputTokens?: number
+  conversationId?: string // Para continuar conversaciones existentes
   previousResponseId?: string
 }
 
