@@ -7,8 +7,7 @@ import Composer from "./Composer"
 import { useLanguage } from "../lib/i18n/LanguageContext"
 import { cls, timeAgo } from "@/lib/utils/helpers"
 import { Conversation, Message as MessageType } from "@/lib/types/chat"
-import { MessageSkeleton } from "./ui/skeleton"
-import { EmptyState, LoadingState } from "./EmptyState"
+import { EmptyState } from "./EmptyState"
 import { ChatMode } from "@/lib/services/openai"
 
 interface ThinkingMessageProps {
@@ -44,9 +43,7 @@ interface ChatPanelProps {
   onResendMessage?: (messageId: string) => void;
   isThinking: boolean;
   onPauseThinking: () => void;
-  isLoadingConversation?: boolean;
   onCreateNewChat?: () => void;
-  onToggleSidebar?: () => void;
   chatMode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
 }
@@ -56,7 +53,7 @@ interface ChatPanelRef {
 }
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, isLoadingConversation = false, onCreateNewChat, onToggleSidebar, chatMode = "fast", onModeChange },
+  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange },
   ref,
 ) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -75,14 +72,9 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
     [],
   )
 
-  // Mostrar loading state si está cargando una conversación
-  if (isLoadingConversation) {
-    return <LoadingState />
-  }
-
   // Mostrar empty state si no hay conversación seleccionada
   if (!conversation) {
-    return <EmptyState onCreateNewChat={onCreateNewChat} onToggleSidebar={onToggleSidebar} />
+    return <EmptyState onCreateNewChat={onCreateNewChat} />
   }
 
   const tags = ["Certified", "Personalized", "Experienced", "Helpful"]
@@ -130,9 +122,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           ))}
         </div>
 
-        {isLoadingConversation ? (
-          <MessageSkeleton />
-        ) : messages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
             {t('noMessagesYet')}
           </div>

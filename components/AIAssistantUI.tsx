@@ -22,7 +22,7 @@ export default function AIAssistantUI() {
   
   // Hooks para el chat con OpenAI
   const { mode, setMode } = useChatMode()
-  const { sendMessage: sendToOpenAI, isLoading: isAiThinking, error: chatError } = useChat({
+  const { sendMessage: sendToOpenAI, isLoading: isAiThinking } = useChat({
     onSuccess: (response) => {
       console.log('Respuesta de OpenAI recibida:', response)
     },
@@ -38,15 +38,11 @@ export default function AIAssistantUI() {
     isLoading: conversationsLoading,
     isLoadingMore,
     hasMore,
-    error: conversationsError,
     createConversation,
     selectConversation,
-    deleteConversation,
-    updateConversationTitle,
     toggleConversationPin,
     addMessage,
     getFilteredConversations,
-    refreshConversations,
     loadMoreConversations
   } = useConversations({
     autoLoad: true // Carga automática pero con caché inteligente
@@ -89,7 +85,6 @@ export default function AIAssistantUI() {
 
   const [isThinking, setIsThinking] = useState<boolean>(false)
   const [thinkingConvId, setThinkingConvId] = useState<string | null>(null)
-  const [isLoadingConversation, setIsLoadingConversation] = useState<boolean>(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -111,10 +106,6 @@ export default function AIAssistantUI() {
   }, [sidebarOpen])
 
   // Obtener conversaciones filtradas usando el hook (OPTIMIZADO - usa caché local)
-  const filtered = useMemo(() => {
-    return getFilteredConversations({ search: query })
-  }, [getFilteredConversations, query])
-
   const pinned = useMemo(() => {
     return getFilteredConversations({ pinned: true })
   }, [getFilteredConversations])
@@ -124,11 +115,10 @@ export default function AIAssistantUI() {
   }, [getFilteredConversations])
 
   async function handleSelectConversation(id: string) {
-    setIsLoadingConversation(true)
     try {
       await selectConversation(id)
-    } finally {
-      setIsLoadingConversation(false)
+    } catch (error) {
+      console.error('Error seleccionando conversación:', error)
     }
   }
 
@@ -230,7 +220,6 @@ export default function AIAssistantUI() {
     setThinkingConvId(null)
   }
 
-  const composerRef = useRef<any>(null)
   const chatPanelRef = useRef<any>(null)
 
   return (
@@ -303,9 +292,7 @@ export default function AIAssistantUI() {
             }}
             isThinking={(isThinking || isAiThinking) && thinkingConvId === selectedConversation?.id}
             onPauseThinking={pauseThinking}
-            isLoadingConversation={isLoadingConversation}
             onCreateNewChat={createNewChat}
-            onToggleSidebar={() => setSidebarOpen(true)}
             chatMode={mode}
             onModeChange={setMode}
           />

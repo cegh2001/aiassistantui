@@ -1,11 +1,13 @@
 import { LoadingSpinner } from "./ui/loading-spinner"
+import { useLanguage } from "../lib/i18n/LanguageContext"
 
 interface EmptyStateProps {
   onCreateNewChat?: () => void
-  onToggleSidebar?: () => void
 }
 
-export function EmptyState({ onCreateNewChat, onToggleSidebar }: EmptyStateProps) {
+export function EmptyState({ onCreateNewChat }: EmptyStateProps) {
+  const { t } = useLanguage()
+  
   return (
     <div className="flex flex-1 items-center justify-center">
       <div className="text-center space-y-4 max-w-md">
@@ -14,27 +16,19 @@ export function EmptyState({ onCreateNewChat, onToggleSidebar }: EmptyStateProps
         </div>
         <div>
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Bienvenido a AI Assistant
+            {t('welcomeToAI')}
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-            Selecciona una conversación existente o crea una nueva para comenzar
+            {t('selectConversationOrCreate')}
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+        <div className="flex justify-center">
           {onCreateNewChat && (
             <button 
               onClick={onCreateNewChat}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
             >
-              Nueva conversación
-            </button>
-          )}
-          {onToggleSidebar && (
-            <button 
-              onClick={onToggleSidebar}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            >
-              Ver historial
+              {t('newChat')}
             </button>
           )}
         </div>
@@ -44,16 +38,18 @@ export function EmptyState({ onCreateNewChat, onToggleSidebar }: EmptyStateProps
 }
 
 export function LoadingState() {
+  const { t } = useLanguage()
+  
   return (
     <div className="flex flex-1 items-center justify-center">
       <div className="text-center space-y-4">
         <LoadingSpinner size="lg" className="mx-auto text-blue-500" />
         <div>
           <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Cargando conversación...
+            {t('loadingConversation')}
           </h3>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Por favor espera un momento
+            {t('pleaseWaitMoment')}
           </p>
         </div>
       </div>
