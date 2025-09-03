@@ -211,13 +211,19 @@ export default function AIAssistantUI() {
         conversationId: convId
       })
       
-      // 5. Desactivar thinking y refrescar para obtener ambos mensajes reales
+      // 5. Desactivar thinking y refrescar SILENCIOSAMENTE para obtener los mensajes reales
       setIsThinking(false)
       setThinkingConvId(null)
       
       if (response) {
-        // Refrescar para reemplazar el mensaje temporal con los reales
-        await handleSelectConversation(convId)
+        // Refrescar SIN loading state - solo actualizar datos
+        try {
+          const conversation = await selectConversation(convId)
+          // No llamamos handleSelectConversation para evitar el loading state
+        } catch (error) {
+          console.error('Error refrescando conversación:', error)
+          // Si falla el refresh silencioso, mantener el estado optimista
+        }
       }
     } catch (error: any) {
       setIsThinking(false)

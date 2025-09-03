@@ -16,7 +16,7 @@ export interface UseConversationsReturn {
   
   // Operaciones de conversación
   createConversation: (title?: string) => Promise<string>
-  selectConversation: (id: string) => void
+  selectConversation: (id: string) => Promise<Conversation | null>
   deleteConversation: (id: string) => Promise<void>
   updateConversationTitle: (id: string, title: string) => Promise<void>
   updateConversationFolder: (id: string, folder: string) => Promise<void>
@@ -98,13 +98,15 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   }, [conversationService, loadConversations])
 
   // Seleccionar conversación
-  const selectConversation = useCallback(async (id: string) => {
+  const selectConversation = useCallback(async (id: string): Promise<Conversation | null> => {
     try {
       const conversation = await conversationService.getConversation(id)
       setSelectedConversation(conversation)
+      return conversation // Retornamos la conversación para uso externo
     } catch (err) {
       console.error('Error seleccionando conversación:', err)
       setError('Error cargando conversación')
+      return null // Retornamos null en caso de error
     }
   }, [conversationService])
 
