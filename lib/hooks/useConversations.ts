@@ -34,6 +34,7 @@ export interface UseConversationsReturn {
     search?: string
     limit?: number
   }) => Conversation[]
+  updateSelectedConversationOptimistically: (updater: (prev: Conversation | null) => Conversation | null) => void
 }
 
 export function useConversations(options: UseConversationsOptions = {}): UseConversationsReturn {
@@ -250,6 +251,11 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     await loadConversations(forceRefresh)
   }, [loadConversations])
 
+  // Actualización optimista de mensajes (solo en UI local)
+  const updateSelectedConversationOptimistically = useCallback((updater: (prev: Conversation | null) => Conversation | null) => {
+    setSelectedConversation(updater)
+  }, [])
+
   // Obtener conversaciones filtradas (usa caché local)
   const getFilteredConversations = useCallback((filter: {
     pinned?: boolean
@@ -319,6 +325,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     
     refreshConversations,
     loadMoreConversations,
-    getFilteredConversations
+    getFilteredConversations,
+    updateSelectedConversationOptimistically
   }
 }

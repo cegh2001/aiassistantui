@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Calendar, LayoutGrid, MoreHorizontal } from "lucide-react"
+import { toast } from "sonner"
 import Sidebar from "./Sidebar"
 import Header from "./Header"
 import ChatPanel from "./ChatPanel"
@@ -22,7 +23,7 @@ export default function AIAssistantUI() {
   
   // Hooks para el chat con OpenAI
   const { mode, setMode } = useChatMode()
-  const { sendMessage: sendToOpenAI, isLoading: isAiThinking } = useChat({
+  const { sendMessage: sendToOpenAI } = useChat({
     onSuccess: (response) => {
       console.log('Respuesta de OpenAI recibida:', response)
     },
@@ -43,7 +44,8 @@ export default function AIAssistantUI() {
     toggleConversationPin,
     addMessage,
     getFilteredConversations,
-    loadMoreConversations
+    loadMoreConversations,
+    updateSelectedConversationOptimistically
   } = useConversations({
     autoLoad: true // Carga automática pero con caché inteligente
   })
@@ -85,6 +87,7 @@ export default function AIAssistantUI() {
 
   const [isThinking, setIsThinking] = useState<boolean>(false)
   const [thinkingConvId, setThinkingConvId] = useState<string | null>(null)
+  const [isLoadingConversation, setIsLoadingConversation] = useState<boolean>(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -116,9 +119,19 @@ export default function AIAssistantUI() {
 
   async function handleSelectConversation(id: string) {
     try {
-      await selectConversation(id)
+      setIsLoadingConversation(true)
+      
+      // Pequeño delay mínimo para mostrar loading state
+      const [conversation] = await Promise.all([
+        selectConversation(id),
+        new Promise(resolve => setTimeout(resolve, 200))
+      ])
+      
     } catch (error) {
       console.error('Error seleccionando conversación:', error)
+      toast.error('Error al cargar la conversación')
+    } finally {
+      setIsLoadingConversation(false)
     }
   }
 
@@ -132,6 +145,8 @@ export default function AIAssistantUI() {
 
   async function createNewChat() {
     try {
+      setIsLoadingConversation(true)
+      
       // Generar un nombre más descriptivo basado en la hora y el modo
       const now = new Date()
       const timeStr = now.toLocaleTimeString('es-ES', { 
@@ -142,10 +157,12 @@ export default function AIAssistantUI() {
       const title = `${modeLabel} ${timeStr}`
       
       const id = await createConversation(title)
-      handleSelectConversation(id)
+      await handleSelectConversation(id)
       setSidebarOpen(false)
     } catch (error) {
       console.error('Error creando chat:', error)
+      toast.error('Error al crear nueva conversación')
+      setIsLoadingConversation(false)
     }
   }
 
@@ -159,21 +176,47 @@ export default function AIAssistantUI() {
     }
 
     try {
+      // 1. Crear mensaje del usuario SOLO para UI local (temporal)
+      const userMessageLocal = {
+        id: `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        role: "user" as const,
+        content: content,
+        createdAt: new Date().toISOString()
+      }
+
+      // 2. Actualizar UI local inmediatamente (optimistic UI)
+      if (selectedConversation) {
+        updateSelectedConversationOptimistically((prev: any) => {
+          if (!prev || prev.id !== convId) return prev
+          
+          const updatedMessages = [...(prev.messages || []), userMessageLocal]
+          return {
+            ...prev,
+            messages: updatedMessages,
+            messageCount: updatedMessages.length,
+            updatedAt: userMessageLocal.createdAt,
+            preview: content.slice(0, 80)
+          }
+        })
+      }
+
+      // 3. Activar estado de thinking
       setIsThinking(true)
       setThinkingConvId(convId)
 
-      // Enviar a OpenAI con el modo seleccionado y el conversationId
-      // El backend se encarga de agregar tanto el mensaje del usuario como la respuesta
+      // 4. Enviar SOLO a OpenAI (NO agregamos el mensaje por separado)
+      // El backend se encarga de agregar tanto user message como response
       const response = await sendToOpenAI(content, { 
         mode: mode,
         conversationId: convId
       })
       
+      // 5. Desactivar thinking y refrescar para obtener ambos mensajes reales
       setIsThinking(false)
       setThinkingConvId(null)
       
       if (response) {
-        // Refrescar la conversación para mostrar los nuevos mensajes
+        // Refrescar para reemplazar el mensaje temporal con los reales
         await handleSelectConversation(convId)
       }
     } catch (error: any) {
@@ -181,7 +224,10 @@ export default function AIAssistantUI() {
       setThinkingConvId(null)
       console.error('Error enviando mensaje:', error)
       
-      // Agregar mensaje de error
+      // Mostrar notificación de error
+      toast.error(`Error al enviar mensaje: ${error.message || 'Error desconocido'}`)
+      
+      // Agregar mensaje de error localmente
       const errorMsg = {
         id: Math.random().toString(36).slice(2),
         role: "assistant" as const,
@@ -189,12 +235,19 @@ export default function AIAssistantUI() {
         createdAt: new Date().toISOString()
       }
 
-      try {
-        await addMessage(convId, errorMsg)
-        // NO refrescar la conversación aquí tampoco
-        // await selectConversation(convId)
-      } catch (addError) {
-        console.error('Error agregando mensaje de error:', addError)
+      // Actualizar UI local con el error
+      if (selectedConversation) {
+        updateSelectedConversationOptimistically((prev: any) => {
+          if (!prev || prev.id !== convId) return prev
+          
+          const updatedMessages = [...(prev.messages || []), errorMsg]
+          return {
+            ...prev,
+            messages: updatedMessages,
+            messageCount: updatedMessages.length,
+            updatedAt: errorMsg.createdAt
+          }
+        })
       }
     }
   }
@@ -290,11 +343,12 @@ export default function AIAssistantUI() {
                 resendMessage(selectedConversation.id, messageId)
               }
             }}
-            isThinking={(isThinking || isAiThinking) && thinkingConvId === selectedConversation?.id}
+            isThinking={isThinking && thinkingConvId === selectedConversation?.id}
             onPauseThinking={pauseThinking}
             onCreateNewChat={createNewChat}
             chatMode={mode}
             onModeChange={setMode}
+            isLoadingConversation={isLoadingConversation}
           />
         </main>
       </div>

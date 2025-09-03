@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '../components/theme-provider'
 import { LanguageProvider } from '../lib/i18n/LanguageContext'
+import { Toaster } from '../components/ui/sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -57,6 +58,7 @@ html {
           <LanguageProvider>
             {children}
           </LanguageProvider>
+          <Toaster />
         </ThemeProvider>
         <Analytics />
       </body>

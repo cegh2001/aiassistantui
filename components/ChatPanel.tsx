@@ -46,6 +46,7 @@ interface ChatPanelProps {
   onCreateNewChat?: () => void;
   chatMode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
+  isLoadingConversation?: boolean;
 }
 
 interface ChatPanelRef {
@@ -53,7 +54,7 @@ interface ChatPanelRef {
 }
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange },
+  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false },
   ref,
 ) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -122,7 +123,18 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           ))}
         </div>
 
-        {messages.length === 0 ? (
+        {isLoadingConversation ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.15s]"></div>
+                <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400"></div>
+              </div>
+              <span className="text-sm text-zinc-500">{t('loadingConversation')}</span>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
             {t('noMessagesYet')}
           </div>
@@ -189,10 +201,13 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
         onSend={async (text: string) => {
           if (!text.trim()) return
           setBusy(true)
-          await onSend?.(text)
-          setBusy(false)
+          try {
+            await onSend?.(text)
+          } finally {
+            setBusy(false)
+          }
         }}
-        busy={busy}
+        busy={busy || isThinking || isLoadingConversation}
         chatMode={chatMode}
         onModeChange={onModeChange}
       />
