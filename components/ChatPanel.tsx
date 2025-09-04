@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, forwardRef, useImperativeHandle, useRef } from "react"
+import { useState, forwardRef, useImperativeHandle, useRef, useEffect } from "react"
 import { Pencil, RefreshCw, Check, X, Square } from "lucide-react"
 import Message from "./Message"
 import Composer from "./Composer"
@@ -17,7 +17,7 @@ interface ThinkingMessageProps {
 function ThinkingMessage({ onPause }: ThinkingMessageProps) {
   const { t } = useLanguage();
   return (
-    <Message role="assistant">
+    <Message role="assistant" isNew={true}>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1">
           <div className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:-0.3s]"></div>
@@ -57,11 +57,46 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
   { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false },
   ref,
 ) {
+  // ✅ TODOS LOS HOOKS AL PRINCIPIO (ANTES DE CUALQUIER RETURN)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState<string>("")
   const [busy, setBusy] = useState<boolean>(false)
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set()) // Track mensajes nuevos
+  const [lastMessageCount, setLastMessageCount] = useState<number>(0) // Track cantidad anterior
   const composerRef = useRef<any>(null)
   const { t } = useLanguage();
+
+  // ✅ Variables derivadas (seguros de calcular siempre)
+  const tags = ["Certified", "Personalized", "Experienced", "Helpful"]
+  const messages = conversation ? (Array.isArray(conversation.messages) ? conversation.messages : []) : []
+  const count = messages.length || (conversation?.messageCount || 0)
+
+  // ✅ useEffect - detectar mensajes nuevos para animaciones
+  useEffect(() => {
+    if (messages.length > lastMessageCount) {
+      // Hay mensajes nuevos
+      const newIds = new Set<string>()
+      
+      // Marcar como nuevos solo los mensajes que no estaban antes
+      for (let i = lastMessageCount; i < messages.length; i++) {
+        if (messages[i]?.id) {
+          newIds.add(messages[i].id)
+        }
+      }
+      
+      setNewMessageIds(newIds)
+      setLastMessageCount(messages.length)
+      
+      // Remover la marca de "nuevo" después de la animación
+      setTimeout(() => {
+        setNewMessageIds(new Set())
+      }, 600) // Un poco más que la duración de la animación (500ms)
+    } else if (messages.length !== lastMessageCount) {
+      // El número de mensajes cambió (puede ser refresh completo)
+      setLastMessageCount(messages.length)
+      setNewMessageIds(new Set()) // Limpiar marcas de nuevos
+    }
+  }, [messages.length, lastMessageCount, messages])
 
   useImperativeHandle(
     ref,
@@ -73,14 +108,10 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
     [],
   )
 
-  // Mostrar empty state si no hay conversación seleccionada
+  // ✅ DESPUÉS de los hooks, podemos hacer returns condicionales
   if (!conversation) {
     return <EmptyState onCreateNewChat={onCreateNewChat} />
   }
-
-  const tags = ["Certified", "Personalized", "Experienced", "Helpful"]
-  const messages = Array.isArray(conversation.messages) ? conversation.messages : []
-  const count = messages.length || conversation.messageCount || 0
 
   function startEdit(m: MessageType) {
     setEditingId(m.id)
@@ -172,7 +203,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
                     </div>
                   </div>
                 ) : (
-                  <Message role={m.role}>
+                  <Message role={m.role} isNew={newMessageIds.has(m.id)}>
                     <div className="whitespace-pre-wrap">{m.content}</div>
                     {m.role === "user" && (
                       <div className="mt-1 flex gap-2 text-[11px] text-zinc-500">
