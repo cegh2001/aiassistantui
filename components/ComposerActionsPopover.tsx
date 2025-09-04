@@ -193,14 +193,14 @@ export default function ComposerActionsPopover({ children, chatMode = "fast", on
           <div className="p-3">
             <div className="space-y-1">
               {mainActions.map((action, index) => renderActionButton(action, index))}
-              <button
+              {/* <button
                 onClick={handleMoreClick}
                 className="flex items-center gap-3 w-full p-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700"
               >
                 <MoreHorizontal className="h-4 w-4" />
                 <span>{t('more')}</span>
                 <ChevronRight className="h-4 w-4 ml-auto" />
-              </button>
+              </button> */}
             </div>
           </div>
         ) : (
