@@ -110,7 +110,11 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
 
   // ✅ DESPUÉS de los hooks, podemos hacer returns condicionales
   if (!conversation) {
-    return <EmptyState onCreateNewChat={onCreateNewChat} />
+    return (
+      <div className="flex h-full flex-col">
+        <EmptyState onCreateNewChat={onCreateNewChat} />
+      </div>
+    )
   }
 
   function startEdit(m: MessageType) {
@@ -142,16 +146,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
         <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
           {t('updated')} {conversation.updatedAt ? timeAgo(conversation.updatedAt) : 'Hace poco'} · {count} {t('messages')}
         </div>
-
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 pb-5 dark:border-zinc-800">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center rounded-full border border-zinc-200 px-3 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:text-zinc-200"
-            >
-              {tag}
-            </span>
-          ))}
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800">
         </div>
 
         {isLoadingConversation ? (

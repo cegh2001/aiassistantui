@@ -53,11 +53,19 @@ export class ConversationClientService {
   }
 
   /**
-   * Obtiene una conversación por ID
+   * Obtiene una conversación por ID con caché optimizado
    */
   async getConversation(conversationId: string): Promise<Conversation | null> {
     try {
-      const response = await fetch(`/api/conversations/${conversationId}`)
+      console.log('🔄 Fetching conversación desde API...')
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        // Optimizaciones de rendimiento
+        cache: 'no-cache', // Siempre obtener la versión más reciente
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      })
       
       if (response.status === 404) {
         return null
@@ -69,7 +77,20 @@ export class ConversationClientService {
         throw new Error(result.error || 'Error obteniendo conversación')
       }
 
-      return result.data
+      // Actualizar caché local con la nueva conversación
+      const conversation = result.data
+      this.store.addConversation({
+        id: conversation.id,
+        title: conversation.title || conversation.metadata?.title || 'Sin título',
+        preview: conversation.preview || conversation.metadata?.preview || '',
+        pinned: conversation.pinned || conversation.metadata?.pinned === 'true',
+        folder: conversation.folder || conversation.metadata?.folder || 'General',
+        messageCount: conversation.messageCount || conversation.messages?.length || 0,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt
+      })
+
+      return conversation
     } catch (error) {
       console.error('Error obteniendo conversación:', error)
       return null

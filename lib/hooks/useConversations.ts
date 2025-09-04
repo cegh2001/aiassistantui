@@ -17,6 +17,7 @@ export interface UseConversationsReturn {
   // Operaciones de conversación
   createConversation: (title?: string) => Promise<string>
   selectConversation: (id: string) => Promise<Conversation | null>
+  refreshSelectedConversation: (id: string) => Promise<Conversation | null>
   deleteConversation: (id: string) => Promise<void>
   updateConversationTitle: (id: string, title: string) => Promise<void>
   updateConversationFolder: (id: string, folder: string) => Promise<void>
@@ -47,11 +48,15 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [lastLoadTime, setLastLoadTime] = useState<number>(0)
+  
+  // Caché en memoria para conversaciones recién cargadas (optimización de velocidad)
+  const [conversationCache, setConversationCache] = useState<Map<string, { conversation: Conversation, timestamp: number }>>(new Map())
 
   const conversationService = ConversationClientService.getInstance()
 
   // Caché de 30 segundos para evitar cargas innecesarias
   const CACHE_DURATION = 30 * 1000 // 30 segundos
+  const CONVERSATION_CACHE_DURATION = 60 * 1000 // 1 minuto para conversaciones individuales
 
   // Cargar conversaciones con caché
   const loadConversations = useCallback(async (forceRefresh = false) => {
@@ -97,16 +102,85 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     }
   }, [conversationService, loadConversations])
 
-  // Seleccionar conversación
+  // Seleccionar conversación con caché inteligente
   const selectConversation = useCallback(async (id: string): Promise<Conversation | null> => {
     try {
+      // Optimización 1: Verificar si ya tenemos la conversación cargada y es la misma
+      if (selectedConversation?.id === id && selectedConversation.messages) {
+        console.log('📦 Usando conversación ya seleccionada')
+        return selectedConversation
+      }
+
+      // Optimización 2: Verificar caché en memoria (SOLO si no es un refresh por mensaje nuevo)
+      const cached = conversationCache.get(id)
+      if (cached) {
+        const age = Date.now() - cached.timestamp
+        if (age < CONVERSATION_CACHE_DURATION) {
+          console.log('📦 Usando conversación desde caché en memoria')
+          setSelectedConversation(cached.conversation)
+          return cached.conversation
+        } else {
+          // Limpiar caché expirado
+          setConversationCache(prev => {
+            const newCache = new Map(prev)
+            newCache.delete(id)
+            return newCache
+          })
+        }
+      }
+
+      console.log('🔄 Cargando conversación desde servidor...')
       const conversation = await conversationService.getConversation(id)
-      setSelectedConversation(conversation)
-      return conversation // Retornamos la conversación para uso externo
+      
+      if (conversation) {
+        // Guardar en caché para uso futuro
+        setConversationCache(prev => {
+          const newCache = new Map(prev)
+          newCache.set(id, { conversation, timestamp: Date.now() })
+          return newCache
+        })
+        
+        setSelectedConversation(conversation)
+      }
+      
+      return conversation
     } catch (err) {
       console.error('Error seleccionando conversación:', err)
       setError('Error cargando conversación')
-      return null // Retornamos null en caso de error
+      return null
+    }
+  }, [conversationService, selectedConversation, conversationCache, CONVERSATION_CACHE_DURATION])
+
+  // Nueva función para refrescar conversación (sin caché, para después de enviar mensajes)
+  const refreshSelectedConversation = useCallback(async (id: string): Promise<Conversation | null> => {
+    try {
+      console.log('🔄 Refrescando conversación desde servidor...')
+      
+      // Limpiar caché para esta conversación
+      setConversationCache(prev => {
+        const newCache = new Map(prev)
+        newCache.delete(id)
+        return newCache
+      })
+      
+      const conversation = await conversationService.getConversation(id)
+      
+      if (conversation) {
+        // Actualizar caché con la nueva versión
+        setConversationCache(prev => {
+          const newCache = new Map(prev)
+          newCache.set(id, { conversation, timestamp: Date.now() })
+          return newCache
+        })
+        
+        setSelectedConversation(conversation)
+      }
+      
+      return conversation
+    } catch (err) {
+      console.error('Error refrescando conversación:', err)
+      setError('Error refrescando conversación')
+      return null
     }
   }, [conversationService])
 
@@ -318,6 +392,7 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
     
     createConversation,
     selectConversation,
+    refreshSelectedConversation,
     deleteConversation,
     updateConversationTitle,
     updateConversationFolder,

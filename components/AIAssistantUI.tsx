@@ -41,6 +41,7 @@ export default function AIAssistantUI() {
     hasMore,
     createConversation,
     selectConversation,
+    refreshSelectedConversation,
     toggleConversationPin,
     addMessage,
     getFilteredConversations,
@@ -88,6 +89,7 @@ export default function AIAssistantUI() {
   const [isThinking, setIsThinking] = useState<boolean>(false)
   const [thinkingConvId, setThinkingConvId] = useState<string | null>(null)
   const [isLoadingConversation, setIsLoadingConversation] = useState<boolean>(false)
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -120,16 +122,20 @@ export default function AIAssistantUI() {
   async function handleSelectConversation(id: string) {
     try {
       setIsLoadingConversation(true)
+      setIsTransitioning(true)
       
-      // Pequeño delay mínimo para mostrar loading state
-      const [conversation] = await Promise.all([
-        selectConversation(id),
-        new Promise(resolve => setTimeout(resolve, 200))
-      ])
+      // Carga optimizada sin delays artificiales
+      const conversation = await selectConversation(id)
+      
+      // Delay mínimo solo para la transición visual suave
+      setTimeout(() => {
+        setIsTransitioning(false)
+      }, 25) // Reducido a 25ms para máxima velocidad
       
     } catch (error) {
       console.error('Error seleccionando conversación:', error)
       toast.error('Error al cargar la conversación')
+      setIsTransitioning(false)
     } finally {
       setIsLoadingConversation(false)
     }
@@ -146,6 +152,7 @@ export default function AIAssistantUI() {
   async function createNewChat() {
     try {
       setIsLoadingConversation(true)
+      setIsTransitioning(true)
       
       // Generar un nombre más descriptivo basado en la hora y el modo
       const now = new Date()
@@ -163,6 +170,7 @@ export default function AIAssistantUI() {
       console.error('Error creando chat:', error)
       toast.error('Error al crear nueva conversación')
       setIsLoadingConversation(false)
+      setIsTransitioning(false)
     }
   }
 
@@ -216,13 +224,13 @@ export default function AIAssistantUI() {
       setThinkingConvId(null)
       
       if (response) {
-        // Refrescar SIN loading state - solo actualizar datos
+        // Refrescar la conversación para obtener la respuesta real de la IA
         try {
-          const conversation = await selectConversation(convId)
-          // No llamamos handleSelectConversation para evitar el loading state
+          await refreshSelectedConversation(convId)
+          console.log('✅ Conversación actualizada con respuesta de IA')
         } catch (error) {
           console.error('Error refrescando conversación:', error)
-          // Si falla el refresh silencioso, mantener el estado optimista
+          // Si falla el refresh, mantener el estado optimista
         }
       }
     } catch (error: any) {
@@ -331,31 +339,33 @@ export default function AIAssistantUI() {
             sidebarCollapsed={sidebarCollapsed} 
             setSidebarOpen={setSidebarOpen}
           />
-          <ChatPanel
-            ref={chatPanelRef}
-            conversation={selectedConversation}
-            onSend={(content: string) => {
-              if (selectedConversation) {
-                sendMessage(selectedConversation.id, content)
-              }
-            }}
-            onEditMessage={(messageId: string, newContent: string) => {
-              if (selectedConversation) {
-                editMessage(selectedConversation.id, messageId, newContent)
-              }
-            }}
-            onResendMessage={(messageId: string) => {
-              if (selectedConversation) {
-                resendMessage(selectedConversation.id, messageId)
-              }
-            }}
-            isThinking={isThinking && thinkingConvId === selectedConversation?.id}
-            onPauseThinking={pauseThinking}
-            onCreateNewChat={createNewChat}
-            chatMode={mode}
-            onModeChange={setMode}
-            isLoadingConversation={isLoadingConversation}
-          />
+          <div className={`flex-1 transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}>
+            <ChatPanel
+              ref={chatPanelRef}
+              conversation={selectedConversation}
+              onSend={(content: string) => {
+                if (selectedConversation) {
+                  sendMessage(selectedConversation.id, content)
+                }
+              }}
+              onEditMessage={(messageId: string, newContent: string) => {
+                if (selectedConversation) {
+                  editMessage(selectedConversation.id, messageId, newContent)
+                }
+              }}
+              onResendMessage={(messageId: string) => {
+                if (selectedConversation) {
+                  resendMessage(selectedConversation.id, messageId)
+                }
+              }}
+              isThinking={isThinking && thinkingConvId === selectedConversation?.id}
+              onPauseThinking={pauseThinking}
+              onCreateNewChat={createNewChat}
+              chatMode={mode}
+              onModeChange={setMode}
+              isLoadingConversation={isLoadingConversation}
+            />
+          </div>
         </main>
       </div>
     </div>

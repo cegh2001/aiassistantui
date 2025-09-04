@@ -263,47 +263,10 @@ export class OpenAIService {
 
       console.log('✅ Respuesta generada para conversación:', conversationId)
 
-      // Actualizar metadata después de la respuesta
-      const { ConversationService } = await import('./conversations')
-      const conversationService = ConversationService.getInstance()
-      
-      // Obtener todos los mensajes para actualizar metadata
-      const allMessages = await conversationService.getMessages(conversationId)
-      const messageCount = allMessages.length
-      
-      // Usar el último mensaje como preview
-      const lastMessage = allMessages[allMessages.length - 1]
-      const preview = lastMessage ? lastMessage.content.slice(0, 80) : ''
-      
-      // Si es el primer intercambio (2 mensajes), generar título inteligente del primer mensaje de usuario
-      const currentConversation = await conversationService.getConversation(conversationId)
-      let title = currentConversation?.title || 'Nueva conversación'
-      if (messageCount === 2) {
-        const firstUserMessage = allMessages.find(msg => msg.role === 'user')
-        if (firstUserMessage) {
-          // Generar título simple basado en el primer mensaje
-          title = firstUserMessage.content
-            .trim()
-            .slice(0, 50)
-            .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ]/g, '')
-            .split(' ')
-            .slice(0, 6)
-            .join(' ')
-            .trim() || 'Nueva conversación'
-        }
-      }
-
-      await conversationService.updateConversation(conversationId, {
-        metadata: {
-          ...currentConversation?.metadata,
-          messageCount: messageCount.toString(),
-          preview,
-          title,
-          updatedAt: new Date().toISOString()
-        }
+      // OPTIMIZACIÓN: Actualizar metadata de forma asíncrona (no bloqueante)
+      this.updateConversationMetadataAsync(conversationId).catch((error: any) => {
+        console.warn('⚠️ Error actualizando metadata (no crítico):', error)
       })
-
-      console.log('✅ Metadata actualizada para conversación:', conversationId)
 
       if (toolProcessingResult) {
         return ResponseProcessor.createResponse(
@@ -407,6 +370,56 @@ export class OpenAIService {
       reasoningEffort: 'high',
       verbosity: 'high'
     })
+  }
+
+  /**
+   * Actualiza metadata de conversación de forma asíncrona (no bloquea la respuesta)
+   */
+  private async updateConversationMetadataAsync(conversationId: string): Promise<void> {
+    try {
+      const { ConversationService } = await import('./conversations')
+      const conversationService = ConversationService.getInstance()
+      
+      // Obtener todos los mensajes para actualizar metadata
+      const allMessages = await conversationService.getMessages(conversationId)
+      const messageCount = allMessages.length
+      
+      // Usar el último mensaje como preview
+      const lastMessage = allMessages[allMessages.length - 1]
+      const preview = lastMessage ? lastMessage.content.slice(0, 80) : ''
+      
+      // Si es el primer intercambio (2 mensajes), generar título inteligente del primer mensaje de usuario
+      const currentConversation = await conversationService.getConversation(conversationId)
+      let title = currentConversation?.title || 'Nueva conversación'
+      if (messageCount === 2) {
+        const firstUserMessage = allMessages.find(msg => msg.role === 'user')
+        if (firstUserMessage) {
+          // Generar título simple basado en el primer mensaje
+          title = firstUserMessage.content
+            .trim()
+            .slice(0, 50)
+            .replace(/[^\w\sáéíóúñÁÉÍÓÚÑ]/g, '')
+            .split(' ')
+            .slice(0, 6)
+            .join(' ')
+            .trim() || 'Nueva conversación'
+        }
+      }
+
+      await conversationService.updateConversation(conversationId, {
+        metadata: {
+          ...currentConversation?.metadata,
+          messageCount: messageCount.toString(),
+          preview,
+          title,
+          updatedAt: new Date().toISOString()
+        }
+      })
+
+      console.log('✅ Metadata actualizada para conversación:', conversationId)
+    } catch (error) {
+      console.error('❌ Error actualizando metadata:', error)
+    }
   }
 
   /**
