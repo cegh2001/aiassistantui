@@ -47,6 +47,7 @@ interface ChatPanelProps {
   chatMode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
   isLoadingConversation?: boolean;
+  isTransitioning?: boolean;
 }
 
 interface ChatPanelRef {
@@ -54,7 +55,7 @@ interface ChatPanelRef {
 }
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false },
+  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false, isTransitioning = false },
   ref,
 ) {
   // ✅ TODOS LOS HOOKS AL PRINCIPIO (ANTES DE CUALQUIER RETURN)
@@ -64,14 +65,16 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
   const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set()) // Track mensajes nuevos
   const [lastMessageCount, setLastMessageCount] = useState<number>(0) // Track cantidad anterior
   const composerRef = useRef<any>(null)
-  const { t } = useLanguage();
+  const messagesEndRef = useRef<HTMLDivElement>(null) // Ref para auto-scroll
+  const scrollContainerRef = useRef<HTMLDivElement>(null) // Ref del contenedor de scroll
+  const { t, language } = useLanguage(); // Obtenemos también el language
 
   // ✅ Variables derivadas (seguros de calcular siempre)
   const tags = ["Certified", "Personalized", "Experienced", "Helpful"]
   const messages = conversation ? (Array.isArray(conversation.messages) ? conversation.messages : []) : []
   const count = messages.length || (conversation?.messageCount || 0)
 
-  // ✅ useEffect - detectar mensajes nuevos para animaciones
+  // ✅ useEffect - detectar mensajes nuevos para animaciones y auto-scroll
   useEffect(() => {
     if (messages.length > lastMessageCount) {
       // Hay mensajes nuevos
@@ -87,6 +90,14 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
       setNewMessageIds(newIds)
       setLastMessageCount(messages.length)
       
+      // Auto-scroll suave hacia abajo cuando llegan mensajes nuevos
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end' 
+        })
+      }, 100) // Pequeño delay para que el DOM se actualice
+      
       // Remover la marca de "nuevo" después de la animación
       setTimeout(() => {
         setNewMessageIds(new Set())
@@ -95,8 +106,28 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
       // El número de mensajes cambió (puede ser refresh completo)
       setLastMessageCount(messages.length)
       setNewMessageIds(new Set()) // Limpiar marcas de nuevos
+      
+      // También hacer scroll en refresh completo, pero más suave
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end' 
+        })
+      }, 150)
     }
   }, [messages.length, lastMessageCount, messages])
+
+  // Auto-scroll inicial cuando se carga una conversación
+  useEffect(() => {
+    if (conversation && messages.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'end' 
+        })
+      }, 200)
+    }
+  }, [conversation?.id]) // Solo cuando cambia la conversación
 
   useImperativeHandle(
     ref,
@@ -111,7 +142,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
   // ✅ DESPUÉS de los hooks, podemos hacer returns condicionales
   if (!conversation) {
     return (
-      <div className="flex h-full flex-col">
+      <div className={`flex h-full flex-col transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}>
         <EmptyState onCreateNewChat={onCreateNewChat} />
       </div>
     )
@@ -139,12 +170,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8">
+      <div 
+        ref={scrollContainerRef}
+        className={`flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8 scroll-smooth transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}
+      >
         <div className="mb-2 text-3xl font-serif tracking-tight sm:text-4xl md:text-5xl">
           <span className="block leading-[1.05] font-sans text-2xl">{conversation.title}</span>
         </div>
         <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-          {t('updated')} {conversation.updatedAt ? timeAgo(conversation.updatedAt) : 'Hace poco'} · {count} {t('messages')}
+          {t('updated')} {conversation.updatedAt ? timeAgo(conversation.updatedAt, language) : (language === 'es' ? 'Hace poco' : 'Just now')} · {count} {t('messages')}
         </div>
         <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800">
         </div>
@@ -218,10 +252,13 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
               </div>
             ))}
             {isThinking && <ThinkingMessage onPause={onPauseThinking} />}
+            {/* Elemento invisible para auto-scroll */}
+            <div ref={messagesEndRef} className="h-1" />
           </>
         )}
       </div>
 
+      {/* Composer sin transición para que siempre esté disponible */}
       <Composer
         ref={composerRef}
         onSend={async (text: string) => {
@@ -229,6 +266,13 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
           setBusy(true)
           try {
             await onSend?.(text)
+            // Auto-scroll después de enviar para asegurar que se vea la respuesta
+            setTimeout(() => {
+              messagesEndRef.current?.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'end' 
+              })
+            }, 200)
           } finally {
             setBusy(false)
           }

@@ -1,11 +1,11 @@
 export const cls = (...c: (string | boolean | undefined | null)[]): string => 
   c.filter(Boolean).join(" ");
 
-export function timeAgo(date: string | Date): string {
+export function timeAgo(date: string | Date, locale: string = 'en'): string {
   const d = typeof date === "string" ? new Date(date) : date;
   const now = new Date();
   const sec = Math.max(1, Math.floor((now.getTime() - d.getTime()) / 1000));
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   
   const ranges: [number, Intl.RelativeTimeFormatUnit][] = [
     [60, "second"], 

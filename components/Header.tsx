@@ -1,8 +1,6 @@
 "use client"
-import { Asterisk, MoreHorizontal, Menu, ChevronDown } from "lucide-react"
+import { Asterisk, Menu, ChevronDown } from "lucide-react"
 import { useState } from "react"
-import GhostIconButton from "./GhostIconButton"
-import OpenAIStatus from "./OpenAIStatus"
 
 interface ChatBot {
   name: string;
@@ -15,15 +13,12 @@ interface HeaderProps {
   setSidebarOpen: (open: boolean) => void;
 }
 
-export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen }: HeaderProps) {
+export default function Header({ sidebarCollapsed, setSidebarOpen }: HeaderProps) {
   const [selectedBot, setSelectedBot] = useState("GPT-5")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
   const chatbots: ChatBot[] = [
     { name: "GPT-5", icon: "🤖" },
-    { name: "Claude Sonnet 4", icon: "🎭" },
-    { name: "Gemini", icon: "💎" },
-    { name: "Assistant", icon: <Asterisk className="h-4 w-4" /> },
   ]
 
   return (
@@ -72,10 +67,6 @@ export default function Header({ createNewChat, sidebarCollapsed, setSidebarOpen
       </div>
 
       <div className="ml-auto flex items-center gap-4">
-        <OpenAIStatus className="hidden md:flex" />
-        <GhostIconButton label="More">
-          <MoreHorizontal className="h-4 w-4" />
-        </GhostIconButton>
       </div>
     </div>
   )

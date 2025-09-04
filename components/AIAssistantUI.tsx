@@ -339,33 +339,32 @@ export default function AIAssistantUI() {
             sidebarCollapsed={sidebarCollapsed} 
             setSidebarOpen={setSidebarOpen}
           />
-          <div className={`flex-1 transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}>
-            <ChatPanel
-              ref={chatPanelRef}
-              conversation={selectedConversation}
-              onSend={(content: string) => {
-                if (selectedConversation) {
-                  sendMessage(selectedConversation.id, content)
-                }
-              }}
-              onEditMessage={(messageId: string, newContent: string) => {
-                if (selectedConversation) {
-                  editMessage(selectedConversation.id, messageId, newContent)
-                }
-              }}
-              onResendMessage={(messageId: string) => {
-                if (selectedConversation) {
-                  resendMessage(selectedConversation.id, messageId)
-                }
-              }}
-              isThinking={isThinking && thinkingConvId === selectedConversation?.id}
-              onPauseThinking={pauseThinking}
-              onCreateNewChat={createNewChat}
-              chatMode={mode}
-              onModeChange={setMode}
-              isLoadingConversation={isLoadingConversation}
-            />
-          </div>
+          <ChatPanel
+            ref={chatPanelRef}
+            conversation={selectedConversation}
+            onSend={(content: string) => {
+              if (selectedConversation) {
+                sendMessage(selectedConversation.id, content)
+              }
+            }}
+            onEditMessage={(messageId: string, newContent: string) => {
+              if (selectedConversation) {
+                editMessage(selectedConversation.id, messageId, newContent)
+              }
+            }}
+            onResendMessage={(messageId: string) => {
+              if (selectedConversation) {
+                resendMessage(selectedConversation.id, messageId)
+              }
+            }}
+            isThinking={isThinking && thinkingConvId === selectedConversation?.id}
+            onPauseThinking={pauseThinking}
+            onCreateNewChat={createNewChat}
+            chatMode={mode}
+            onModeChange={setMode}
+            isLoadingConversation={isLoadingConversation}
+            isTransitioning={isTransitioning}
+          />
         </main>
       </div>
     </div>
