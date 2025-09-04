@@ -218,7 +218,7 @@ export default function Sidebar({
             </div>
 
             <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
-              <SidebarSection
+              {/* <SidebarSection
                 icon={<Star className="h-4 w-4" />}
                 title={t('pinned').toUpperCase()}
                 collapsed={collapsed.pinned}
@@ -242,7 +242,7 @@ export default function Sidebar({
                     />
                   ))
                 )}
-              </SidebarSection>
+              </SidebarSection> */}
 
               <SidebarSection
                 icon={<Clock className="h-4 w-4" />}

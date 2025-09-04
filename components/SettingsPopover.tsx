@@ -69,7 +69,7 @@ export default function SettingsPopover({ children }: SettingsPopoverProps) {
                 <ChevronRight className="h-4 w-4" />
               </button>
 
-              <button className="flex items-center gap-3 w-full p-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
+              {/* <button className="flex items-center gap-3 w-full p-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
                 <HelpCircle className="h-4 w-4" />
                 <span>{t('getHelp') || 'Get help'}</span>
               </button>
@@ -88,7 +88,7 @@ export default function SettingsPopover({ children }: SettingsPopoverProps) {
               <button className="flex items-center gap-3 w-full p-2 text-sm text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg">
                 <LogOut className="h-4 w-4" />
                 <span>{t('logOut') || 'Log out'}</span>
-              </button>
+              </button> */}
             </div>
           ) : (
             <div className="space-y-1">
