@@ -13,7 +13,7 @@ interface ConversationRowProps {
 }
 
 export default function ConversationRow({ data, active, onSelect, onTogglePin, showMeta }: ConversationRowProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   return (
     <div className="group relative">
@@ -25,16 +25,15 @@ export default function ConversationRow({ data, active, onSelect, onTogglePin, s
             : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
         )}
         onClick={onSelect}
-        title={data.title}
+        title={data.preview || data.title}
       >
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium tracking-tight">{data.title}</span>
             <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400">
-              {timeAgo(data.updatedAt || new Date().toISOString())}
+              {timeAgo(data.updatedAt || new Date().toISOString(), language)}
             </span>
           </div>
-          {/* Removido: conteo de mensajes para UI más limpia */}
         </div>
         <button
           onClick={(e) => {
@@ -51,9 +50,6 @@ export default function ConversationRow({ data, active, onSelect, onTogglePin, s
             <Star className="h-4 w-4" />
           )} */}
         </button>
-      </div>
-      <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1 hidden w-64 rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-700 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 md:group-hover:block">
-        <div className="line-clamp-6 whitespace-pre-wrap">{data.preview}</div>
       </div>
     </div>
   );
