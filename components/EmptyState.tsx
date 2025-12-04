@@ -9,16 +9,16 @@ export function EmptyState({ onCreateNewChat }: EmptyStateProps) {
   const { t } = useLanguage()
   
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <div className="flex flex-1 items-center justify-center px-4">
       <div className="text-center space-y-4 max-w-md">
-        <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-          <span className="text-2xl font-bold text-white">✱</span>
+        <div className="mx-auto h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <span className="text-xl sm:text-2xl font-bold text-white">✱</span>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             {t('welcomeToAI')}
           </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-2">
             {t('selectConversationOrCreate')}
           </p>
         </div>
@@ -41,14 +41,14 @@ export function LoadingState() {
   const { t } = useLanguage()
   
   return (
-    <div className="flex flex-1 items-center justify-center">
+    <div className="flex flex-1 items-center justify-center px-4">
       <div className="text-center space-y-4">
         <LoadingSpinner size="lg" className="mx-auto text-blue-500" />
         <div>
-          <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h3 className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-zinc-100">
             {t('loadingConversation')}
           </h3>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
             {t('pleaseWaitMoment')}
           </p>
         </div>

@@ -11,7 +11,7 @@ export default function Message({ role, children, isNew = false }: MessageProps)
   return (
     <div 
       className={cls(
-        "flex gap-3 transition-all duration-500 ease-out",
+        "flex gap-2 sm:gap-3 transition-all duration-500 ease-out",
         isUser ? "justify-end" : "justify-start",
         // Animación de entrada suave
         isNew 
@@ -20,13 +20,13 @@ export default function Message({ role, children, isNew = false }: MessageProps)
       )}
     >
       {!isUser && (
-        <div className="mt-0.5 grid h-7 w-7 place-items-center rounded-full bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
+        <div className="mt-0.5 grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-full bg-zinc-900 text-[9px] sm:text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
           AI
         </div>
       )}
       <div
         className={cls(
-          "max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm transition-all duration-300 ease-out",
+          "max-w-[85%] sm:max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm transition-all duration-300 ease-out break-words",
           // Animación específica para el contenido de la burbuja
           isNew && "animate-in fade-in-0 slide-in-from-bottom-1",
           isUser
@@ -37,7 +37,7 @@ export default function Message({ role, children, isNew = false }: MessageProps)
         {children}
       </div>
       {isUser && (
-        <div className="mt-0.5 grid h-7 w-7 place-items-center rounded-full bg-zinc-900 text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
+        <div className="mt-0.5 grid h-6 w-6 sm:h-7 sm:w-7 shrink-0 place-items-center rounded-full bg-zinc-900 text-[9px] sm:text-[10px] font-bold text-white dark:bg-white dark:text-zinc-900">
           JD
         </div>
       )}

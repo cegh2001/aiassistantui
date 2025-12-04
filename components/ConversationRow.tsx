@@ -19,10 +19,10 @@ export default function ConversationRow({ data, active, onSelect, onTogglePin, s
     <div className="group relative">
       <div
         className={cls(
-          "-mx-1 flex w-[calc(100%+8px)] items-center gap-2 rounded-lg px-2 py-2 cursor-pointer",
+          "-mx-1 flex w-[calc(100%+8px)] items-center gap-2 rounded-lg px-2 py-2.5 sm:py-2 cursor-pointer touch-manipulation",
           active
             ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800/60 dark:text-zinc-100"
-            : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            : "hover:bg-zinc-100 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800"
         )}
         onClick={onSelect}
         title={data.preview || data.title}

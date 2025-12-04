@@ -174,15 +174,15 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
     <div className="flex h-full min-h-0 flex-1 flex-col">
       <div 
         ref={scrollContainerRef}
-        className={`flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-8 scroll-smooth transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}
+        className={`flex-1 space-y-4 sm:space-y-5 overflow-y-auto px-3 py-4 sm:px-6 md:px-8 scroll-smooth transition-all duration-150 ease-out ${isTransitioning ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'}`}
       >
-        <div className="mb-2 text-3xl font-serif tracking-tight sm:text-4xl md:text-5xl">
-          <span className="block leading-[1.05] font-sans text-2xl">{conversation.title}</span>
+        <div className="mb-2">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold leading-tight line-clamp-2">{conversation.title}</h1>
         </div>
-        <div className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="mb-3 sm:mb-4 text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">
           {t('updated')} {conversation.updatedAt ? timeAgo(conversation.updatedAt, language) : (language === 'es' ? 'Hace poco' : 'Just now')} · {count} {t('messages')}
         </div>
-        <div className="mb-6 flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800">
+        <div className="mb-4 sm:mb-6 flex flex-wrap gap-2 border-b border-zinc-200 dark:border-zinc-800">
         </div>
 
         {isLoadingConversation ? (
@@ -197,7 +197,7 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
             </div>
           </div>
         ) : messages.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          <div className="rounded-xl border border-dashed border-zinc-300 p-4 sm:p-6 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 text-center">
             {t('noMessagesYet')}
           </div>
         ) : (

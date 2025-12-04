@@ -93,14 +93,14 @@ const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSe
   // Si se alcanzó el límite, mostrar mensaje especial
   if (isLimitReached) {
     return (
-      <div className="border-t border-zinc-200/60 p-4 dark:border-zinc-800">
+      <div className="border-t border-zinc-200/60 p-3 sm:p-4 dark:border-zinc-800">
         <div className="mx-auto max-w-3xl">
-          <div className="flex flex-col items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <span className="text-xl">🚫</span>
-              <span className="font-medium">{t('demoLimitReached') || 'Límite de demostración alcanzado'}</span>
+              <span className="text-lg sm:text-xl">🚫</span>
+              <span className="font-medium text-sm sm:text-base">{t('demoLimitReached') || 'Límite de demostración alcanzado'}</span>
             </div>
-            <p className="text-center text-sm text-amber-600 dark:text-amber-500">
+            <p className="text-center text-xs sm:text-sm text-amber-600 dark:text-amber-500">
               {t('demoLimitMessage') || 'Has utilizado todas las respuestas disponibles en esta demostración. ¡Gracias por probar AI Assistant UI!'}
             </p>
           </div>
@@ -110,11 +110,11 @@ const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSe
   }
 
   return (
-    <div className="border-t border-zinc-200/60 p-4 dark:border-zinc-800">
+    <div className="border-t border-zinc-200/60 p-3 sm:p-4 dark:border-zinc-800">
       <div
         className={cls(
           "mx-auto flex flex-col rounded-2xl border bg-white shadow-sm dark:bg-zinc-950 transition-all duration-200",
-          "max-w-3xl border-zinc-300 dark:border-zinc-700 p-3",
+          "max-w-3xl border-zinc-300 dark:border-zinc-700 p-2 sm:p-3",
           isFocused && "ring-2 ring-blue-500/20 border-blue-500/50"
         )}
       >
@@ -184,7 +184,7 @@ const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSe
         </div>
       </div>
 
-      <div className="mx-auto mt-2 max-w-3xl px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+      <div className="hidden sm:block mx-auto mt-2 max-w-3xl px-1 text-[11px] text-zinc-500 dark:text-zinc-400">
         {t('pressEnterToSend')} ·{" "}
         <kbd className="rounded border border-zinc-300 bg-zinc-50 px-1 dark:border-zinc-600 dark:bg-zinc-800">
           Shift
