@@ -28,13 +28,7 @@ export default function AIAssistantUI() {
   } = useChat({
     onSuccess: (response, limitInfo) => {
       console.log('Respuesta de OpenAI recibida:', response)
-      // Mostrar advertencia si quedan pocas respuestas
-      if (limitInfo?.warning) {
-        toast.warning(limitInfo.warning, {
-          duration: 5000,
-          icon: '⚠️'
-        })
-      }
+      // Las advertencias de límite se manejan en onLimitWarning para evitar duplicados
     },
     onError: (error, isLimitError, limitInfo) => {
       console.error('Error en chat:', error)
@@ -48,12 +42,11 @@ export default function AIAssistantUI() {
       }
     },
     onLimitWarning: (warning, remaining) => {
-      if (remaining <= 2) {
-        toast.warning(warning, {
-          duration: 5000,
-          icon: '⏳'
-        })
-      }
+      // Solo mostrar advertencia aquí para evitar duplicados
+      toast.warning(warning, {
+        duration: 5000,
+        icon: remaining === 1 ? '⚠️' : '⏳'
+      })
     }
   })
 

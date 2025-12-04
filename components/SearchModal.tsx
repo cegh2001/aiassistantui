@@ -106,34 +106,34 @@ export default function SearchModal({
             initial={{ opacity: 0, scale: 0.95, y: -20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            className="fixed left-1/2 top-[20%] z-50 w-full max-w-2xl -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+            className="fixed inset-x-3 sm:inset-x-auto sm:left-1/2 top-[10%] sm:top-[20%] z-50 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 rounded-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
           >
             {/* Search Header */}
-            <div className="flex items-center gap-3 border-b border-zinc-200 p-4 dark:border-zinc-800">
-              <SearchIcon className="h-5 w-5 text-zinc-400" />
+            <div className="flex items-center gap-2 sm:gap-3 border-b border-zinc-200 p-3 sm:p-4 dark:border-zinc-800">
+              <SearchIcon className="h-5 w-5 text-zinc-400 shrink-0" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search chats..."
-                className="flex-1 bg-transparent text-lg outline-none placeholder:text-zinc-400"
+                className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-zinc-400"
                 autoFocus
               />
-              <button onClick={handleClose} className="rounded-lg p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+              <button onClick={handleClose} className="rounded-lg p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 shrink-0">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Search Results */}
-            <div className="max-h-[60vh] overflow-y-auto">
+            <div className="max-h-[70vh] sm:max-h-[60vh] overflow-y-auto">
               {/* New Chat Option */}
               {createNewChat && (
                 <div className="border-b border-zinc-200 p-2 dark:border-zinc-800">
                   <button
                     onClick={handleNewChat}
-                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 touch-manipulation"
                   >
-                    <Plus className="h-5 w-5 text-zinc-500" />
+                    <Plus className="h-5 w-5 text-zinc-500 shrink-0" />
                     <span className="font-medium">New chat</span>
                   </button>
                 </div>
@@ -151,12 +151,12 @@ export default function SearchModal({
                         <button
                           key={conv.id}
                           onClick={() => handleSelectConversation(conv.id)}
-                          className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 active:bg-zinc-100 dark:active:bg-zinc-800 touch-manipulation"
                         >
                           <Clock className="h-4 w-4 text-zinc-400 shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium">{conv.title}</div>
-                            <div className="truncate text-sm text-zinc-500 dark:text-zinc-400">{conv.preview}</div>
+                            <div className="truncate font-medium text-sm sm:text-base">{conv.title}</div>
+                            <div className="truncate text-xs sm:text-sm text-zinc-500 dark:text-zinc-400">{conv.preview}</div>
                           </div>
                         </button>
                       ))}
