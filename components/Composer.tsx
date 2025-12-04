@@ -12,6 +12,8 @@ interface ComposerProps {
   busy?: boolean;
   chatMode?: ChatMode;
   onModeChange?: (mode: ChatMode) => void;
+  isLimitReached?: boolean;
+  remainingResponses?: number | null;
 }
 
 export interface ComposerRef {
@@ -19,7 +21,7 @@ export interface ComposerRef {
   focus: () => void;
 }
 
-const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSend, busy, chatMode = "fast", onModeChange }, ref) {
+const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSend, busy, chatMode = "fast", onModeChange, isLimitReached = false, remainingResponses = null }, ref) {
   const [value, setValue] = useState("")
   const [sending, setSending] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -86,7 +88,26 @@ const Composer = forwardRef<ComposerRef, ComposerProps>(function Composer({ onSe
   }
 
   const hasContent = value.length > 0
-  const canSend = hasContent && !sending && !busy
+  const canSend = hasContent && !sending && !busy && !isLimitReached
+
+  // Si se alcanzó el límite, mostrar mensaje especial
+  if (isLimitReached) {
+    return (
+      <div className="border-t border-zinc-200/60 p-4 dark:border-zinc-800">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
+            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+              <span className="text-xl">🚫</span>
+              <span className="font-medium">{t('demoLimitReached') || 'Límite de demostración alcanzado'}</span>
+            </div>
+            <p className="text-center text-sm text-amber-600 dark:text-amber-500">
+              {t('demoLimitMessage') || 'Has utilizado todas las respuestas disponibles en esta demostración. ¡Gracias por probar AI Assistant UI!'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="border-t border-zinc-200/60 p-4 dark:border-zinc-800">

@@ -23,12 +23,40 @@ export default function AIAssistantUI() {
   
   // Hooks para el chat con OpenAI
   const { mode, setMode } = useChatMode()
-  const { sendMessage: sendToOpenAI } = useChat({
-    onSuccess: (response) => {
+  const { 
+    sendMessage: sendToOpenAI, 
+    isLimitReached, 
+    limitInfo,
+    remainingResponses 
+  } = useChat({
+    onSuccess: (response, limitInfo) => {
       console.log('Respuesta de OpenAI recibida:', response)
+      // Mostrar advertencia si quedan pocas respuestas
+      if (limitInfo?.warning) {
+        toast.warning(limitInfo.warning, {
+          duration: 5000,
+          icon: '⚠️'
+        })
+      }
     },
-    onError: (error) => {
+    onError: (error, isLimitError, limitInfo) => {
       console.error('Error en chat:', error)
+      // Mostrar toast específico para límite alcanzado
+      if (isLimitError) {
+        toast.error(error, {
+          duration: 10000,
+          icon: '🚫',
+          description: 'Esta es una versión de demostración con uso limitado.'
+        })
+      }
+    },
+    onLimitWarning: (warning, remaining) => {
+      if (remaining <= 2) {
+        toast.warning(warning, {
+          duration: 5000,
+          icon: '⏳'
+        })
+      }
     }
   })
 
@@ -218,6 +246,30 @@ export default function AIAssistantUI() {
         mode: mode,
         conversationId: convId
       })
+
+      // Si se alcanzó el límite, mostrar mensaje en el chat
+      if (!response && isLimitReached) {
+        const limitMessage = {
+          id: `limit_${Date.now()}`,
+          role: "assistant" as const,
+          content: `🚫 **Límite de demostración alcanzado**\n\nHas utilizado las ${limitInfo?.maxResponses || 4} respuestas disponibles en esta demostración.\n\n¡Gracias por probar AI Assistant UI! Si te interesa el proyecto completo, puedes contactarme.`,
+          createdAt: new Date().toISOString()
+        }
+        
+        updateSelectedConversationOptimistically((prev: any) => {
+          if (!prev || prev.id !== convId) return prev
+          const updatedMessages = [...(prev.messages || []), limitMessage]
+          return {
+            ...prev,
+            messages: updatedMessages,
+            messageCount: updatedMessages.length
+          }
+        })
+        
+        setIsThinking(false)
+        setThinkingConvId(null)
+        return
+      }
       
       // 5. Desactivar thinking y refrescar SILENCIOSAMENTE para obtener los mensajes reales
       setIsThinking(false)
@@ -376,6 +428,8 @@ export default function AIAssistantUI() {
             onModeChange={setMode}
             isLoadingConversation={isLoadingConversation}
             isTransitioning={isTransitioning}
+            isLimitReached={isLimitReached}
+            remainingResponses={remainingResponses}
           />
         </main>
       </div>

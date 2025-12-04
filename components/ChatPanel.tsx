@@ -48,6 +48,8 @@ interface ChatPanelProps {
   onModeChange?: (mode: ChatMode) => void;
   isLoadingConversation?: boolean;
   isTransitioning?: boolean;
+  isLimitReached?: boolean;
+  remainingResponses?: number | null;
 }
 
 interface ChatPanelRef {
@@ -55,7 +57,7 @@ interface ChatPanelRef {
 }
 
 const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
-  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false, isTransitioning = false },
+  { conversation, onSend, onEditMessage, onResendMessage, isThinking, onPauseThinking, onCreateNewChat, chatMode = "fast", onModeChange, isLoadingConversation = false, isTransitioning = false, isLimitReached = false, remainingResponses = null },
   ref,
 ) {
   // ✅ TODOS LOS HOOKS AL PRINCIPIO (ANTES DE CUALQUIER RETURN)
@@ -280,6 +282,8 @@ const ChatPanel = forwardRef<ChatPanelRef, ChatPanelProps>(function ChatPanel(
         busy={busy || isThinking || isLoadingConversation}
         chatMode={chatMode}
         onModeChange={onModeChange}
+        isLimitReached={isLimitReached}
+        remainingResponses={remainingResponses}
       />
     </div>
   )
