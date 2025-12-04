@@ -286,15 +286,27 @@ export class ConversationService {
         order: 'asc'
       })
 
+      console.log('📋 Items crudos de la conversación:', response.data.map(item => ({
+        id: item.id,
+        type: item.type,
+        role: (item as any).role,
+        hasContent: !!item.content
+      })))
+
       const openaiMessages = response.data
         .filter(item => {
-          // Filtrar solo mensajes del usuario y cualquier item con role assistant
-          const isUserMessage = item.type === 'message' && (item as any).role === 'user'
-          const isAssistantItem = (item as any).role === 'assistant'
+          // Filtrar mensajes tanto de usuario como de asistente
+          const role = (item as any).role
+          const type = item.type
           
-          return isUserMessage || isAssistantItem
+          // Aceptar cualquier item que sea un mensaje con role user o assistant
+          const isValidMessage = type === 'message' && (role === 'user' || role === 'assistant')
+          
+          return isValidMessage
         })
         .map(item => this.formatItemAsMessage(item))
+      
+      console.log('📨 Mensajes formateados:', openaiMessages.length)
       
       // Usar únicamente mensajes de la API de Conversations
       return openaiMessages

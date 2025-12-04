@@ -224,6 +224,10 @@ export default function AIAssistantUI() {
       setThinkingConvId(null)
       
       if (response) {
+        // Pequeño delay para asegurar que la API de OpenAI procesó los mensajes
+        // La API de Conversations puede tardar un momento en persistir los items
+        await new Promise(resolve => setTimeout(resolve, 300))
+        
         // Refrescar la conversación para obtener la respuesta real de la IA
         try {
           await refreshSelectedConversation(convId)
@@ -231,6 +235,14 @@ export default function AIAssistantUI() {
         } catch (error) {
           console.error('Error refrescando conversación:', error)
           // Si falla el refresh, mantener el estado optimista
+        }
+      } else {
+        // Si no hay respuesta, igualmente intentar refrescar por si hay datos parciales
+        console.warn('⚠️ No se recibió respuesta de OpenAI, intentando refresh...')
+        try {
+          await refreshSelectedConversation(convId)
+        } catch (error) {
+          console.error('Error en refresh de fallback:', error)
         }
       }
     } catch (error: any) {

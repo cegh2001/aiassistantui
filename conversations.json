@@ -1,0 +1,28 @@
+{
+  "conversationIds": [
+    "conv_6931cee1ffc88193af200768de190260087e7bd7e2431986",
+    "conv_6931ce296ed08196b2712cb655dd97ee0a8ae0d60ccba521"
+  ],
+  "recentConversations": {
+    "conv_6931ce296ed08196b2712cb655dd97ee0a8ae0d60ccba521": {
+      "id": "conv_6931ce296ed08196b2712cb655dd97ee0a8ae0d60ccba521",
+      "title": "Chat 14:08",
+      "preview": "¡Mucho gusto, Carlos! ¿En qué te ayudo?",
+      "pinned": false,
+      "folder": "General",
+      "messageCount": 8,
+      "createdAt": "2025-12-04T18:08:39.926Z",
+      "updatedAt": "2025-12-04T18:09:44.060Z"
+    },
+    "conv_6931cee1ffc88193af200768de190260087e7bd7e2431986": {
+      "id": "conv_6931cee1ffc88193af200768de190260087e7bd7e2431986",
+      "title": "hola",
+      "preview": "¡Igualmente! ¿En qué te ayudo?",
+      "pinned": false,
+      "folder": "General",
+      "messageCount": 6,
+      "createdAt": "2025-12-04T18:11:44.169Z",
+      "updatedAt": "2025-12-04T18:12:18.488Z"
+    }
+  }
+}

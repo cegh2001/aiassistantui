@@ -219,6 +219,7 @@ export class OpenAIService {
 
   /**
    * Envía un mensaje usando una conversación existente
+   * NOTA: La Responses API con 'conversation' agrega automáticamente los mensajes
    */
   private async sendMessageWithConversation(
     input: string,
@@ -236,6 +237,8 @@ export class OpenAIService {
       const processedInput = PromptProcessor.processInput(input, effectiveMode, needsDatabaseTools || false)
 
       // Crear la respuesta usando la conversación
+      // IMPORTANTE: La Responses API con 'conversation' agrega automáticamente
+      // tanto el mensaje del usuario como la respuesta del asistente
       const requestBody = ModeConfigurator.buildRequestBody(
         model,
         processedInput,
@@ -259,7 +262,8 @@ export class OpenAIService {
         hasTools: needsDatabaseTools
       })
 
-      // Generar respuesta usando Responses API (sin conversation_id)
+      // Generar respuesta usando Responses API
+      // La API automáticamente agrega user message + assistant response a la conversación
       const response = await getClient().responses.create(requestBody)
 
       console.log('📥 Respuesta de conversación:', {
@@ -276,17 +280,22 @@ export class OpenAIService {
 
       const finalContent = toolProcessingResult?.content || response.output_text || ''
 
-      // Si hay herramientas MCP procesadas, agregar manualmente el resultado a la conversación
-      // porque el Responses API no maneja tool outputs automáticamente con conversation_id
+      // Si hay herramientas MCP procesadas, agregar el resultado manualmente
+      // porque el tool output NO se agrega automáticamente a la conversación
       if (toolProcessingResult && finalContent) {
-        await getClient().conversations.items.create(conversationId, {
-          items: [{
-            type: 'message',
-            role: 'assistant',
-            content: finalContent
-          }]
-        })
-        console.log('✅ Resultado de herramientas MCP agregado a conversación:', conversationId)
+        try {
+          console.log('📝 Agregando resultado de herramientas MCP a conversación...')
+          await getClient().conversations.items.create(conversationId, {
+            items: [{
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: finalContent }]
+            }]
+          })
+          console.log('✅ Resultado de herramientas MCP agregado')
+        } catch (addError) {
+          console.error('❌ Error agregando resultado de herramientas:', addError)
+        }
       }
 
       console.log('✅ Respuesta generada para conversación:', conversationId)
