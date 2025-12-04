@@ -1,171 +1,17 @@
 {
   "conversationIds": [
-    "conv_68b7334bc4b4819390dad7392de80e0007c7925dc669adc2",
-    "conv_68b732626f9c819696eb65567a6f217b06534d8b42a1bf66",
-    "conv_68b731d9f04081948b0c00eb8c84a769017333521d7c60ee",
-    "conv_68b730b417dc8194ba2c56f4c11198a70fcbbeaca4380678",
-    "conv_68b730765d248196982f72439df34ef00b804b716011ebe7",
-    "conv_68b7306df0848194be68bece8e8ca643031147bfefb27e7d",
-    "conv_68b730670c3081958944e8b254e2603905de5a7af4620a7d",
-    "conv_68b72fdf22bc81958fce7b7f9cbd9bff0048388172357834",
-    "conv_68b72f4e4f248195b67d6fad6f2663fa02d16864432e04ef",
-    "conv_68b72e41fe78819799a09d8e162aa6e30444749a41529366",
-    "conv_68b729052464819681bc43e32b951b2d08c2cf18e8fbc22c",
-    "conv_68b72887a06c8195b44b7b390ec1348107a745b791e8f1b3",
-    "conv_68b72796a5d08195b96425d22e85256b04bb7dbc74a91fb1",
-    "conv_68b726b99e8081958a15a01b3fdf396a0e7a63332322132b",
-    "conv_68b71c493abc81959045b2e7cc01a6ee017dfbd9df4c387f"
+    "conv_691dba3d94f4819680eec4f45c644ec60c0bf84127994247"
   ],
-  "conversations": {
-    "conv_68b71c493abc81959045b2e7cc01a6ee017dfbd9df4c387f": {
-      "id": "conv_68b71c493abc81959045b2e7cc01a6ee017dfbd9df4c387f",
-      "title": "hola",
-      "preview": "¡Hola! ¿En qué puedo ayudarte hoy?",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 8,
-      "createdAt": "2025-09-02T16:33:11.558Z",
-      "updatedAt": "2025-09-02T16:55:33.206Z"
-    },
-    "conv_68b726b99e8081958a15a01b3fdf396a0e7a63332322132b": {
-      "id": "conv_68b726b99e8081958a15a01b3fdf396a0e7a63332322132b",
-      "title": "me gusta el pollo",
-      "preview": "¡Qué bueno! ¿Cómo te gusta más: a la parrilla, frito, al horno, en tacos, en cur",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 2,
-      "createdAt": "2025-09-02T17:17:43.878Z",
-      "updatedAt": "2025-09-02T17:18:31.158Z"
-    },
-    "conv_68b72796a5d08195b96425d22e85256b04bb7dbc74a91fb1": {
-      "id": "conv_68b72796a5d08195b96425d22e85256b04bb7dbc74a91fb1",
-      "title": "hola rey",
-      "preview": "¡Hola! ¿En qué puedo ayudarte hoy?",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 2,
-      "createdAt": "2025-09-02T17:21:24.893Z",
-      "updatedAt": "2025-09-02T17:21:42.180Z"
-    },
-    "conv_68b72887a06c8195b44b7b390ec1348107a745b791e8f1b3": {
-      "id": "conv_68b72887a06c8195b44b7b390ec1348107a745b791e8f1b3",
-      "title": "hola",
-      "preview": "¡Mucho gusto, Carlos! ¿En qué puedo ayudarte hoy?",
+  "recentConversations": {
+    "conv_691dba3d94f4819680eec4f45c644ec60c0bf84127994247": {
+      "id": "conv_691dba3d94f4819680eec4f45c644ec60c0bf84127994247",
+      "title": "Buenas como te llamas",
+      "preview": "Claro, puedes llamarme Manolito. ¿En qué te ayudo hoy?",
       "pinned": false,
       "folder": "General",
       "messageCount": 4,
-      "createdAt": "2025-09-02T17:25:25.924Z",
-      "updatedAt": "2025-09-02T17:26:03.573Z"
-    },
-    "conv_68b729052464819681bc43e32b951b2d08c2cf18e8fbc22c": {
-      "id": "conv_68b729052464819681bc43e32b951b2d08c2cf18e8fbc22c",
-      "title": "holis",
-      "preview": "¡Hola! ¿En qué puedo ayudarte hoy?",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 4,
-      "createdAt": "2025-09-02T17:27:31.433Z",
-      "updatedAt": "2025-09-02T17:34:49.783Z"
-    },
-    "conv_68b72e41fe78819799a09d8e162aa6e30444749a41529366": {
-      "id": "conv_68b72e41fe78819799a09d8e162aa6e30444749a41529366",
-      "title": "hola",
-      "preview": "hola",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 1,
-      "createdAt": "2025-09-02T17:49:52.237Z",
-      "updatedAt": "2025-09-02T17:50:05.046Z"
-    },
-    "conv_68b72f4e4f248195b67d6fad6f2663fa02d16864432e04ef": {
-      "id": "conv_68b72f4e4f248195b67d6fad6f2663fa02d16864432e04ef",
-      "title": "hola",
-      "preview": "hola",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 1,
-      "createdAt": "2025-09-02T17:54:20.514Z",
-      "updatedAt": "2025-09-02T17:54:36.332Z"
-    },
-    "conv_68b72fdf22bc81958fce7b7f9cbd9bff0048388172357834": {
-      "id": "conv_68b72fdf22bc81958fce7b7f9cbd9bff0048388172357834",
-      "title": "hola",
-      "preview": "hola",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 1,
-      "createdAt": "2025-09-02T17:56:45.442Z",
-      "updatedAt": "2025-09-02T17:57:03.452Z"
-    },
-    "conv_68b730670c3081958944e8b254e2603905de5a7af4620a7d": {
-      "id": "conv_68b730670c3081958944e8b254e2603905de5a7af4620a7d",
-      "title": "Chat 13:59",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T17:59:01.251Z",
-      "updatedAt": "2025-09-02T17:59:00.056Z"
-    },
-    "conv_68b7306df0848194be68bece8e8ca643031147bfefb27e7d": {
-      "id": "conv_68b7306df0848194be68bece8e8ca643031147bfefb27e7d",
-      "title": "Chat 13:59",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T17:59:08.135Z",
-      "updatedAt": "2025-09-02T17:59:06.983Z"
-    },
-    "conv_68b730765d248196982f72439df34ef00b804b716011ebe7": {
-      "id": "conv_68b730765d248196982f72439df34ef00b804b716011ebe7",
-      "title": "Chat 13:59",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T17:59:16.577Z",
-      "updatedAt": "2025-09-02T17:59:15.522Z"
-    },
-    "conv_68b730b417dc8194ba2c56f4c11198a70fcbbeaca4380678": {
-      "id": "conv_68b730b417dc8194ba2c56f4c11198a70fcbbeaca4380678",
-      "title": "hola",
-      "preview": "hola",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 1,
-      "createdAt": "2025-09-02T18:00:18.437Z",
-      "updatedAt": "2025-09-02T18:00:47.030Z"
-    },
-    "conv_68b731d9f04081948b0c00eb8c84a769017333521d7c60ee": {
-      "id": "conv_68b731d9f04081948b0c00eb8c84a769017333521d7c60ee",
-      "title": "Chat 14:05",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T18:05:12.150Z",
-      "updatedAt": "2025-09-02T18:05:11.120Z"
-    },
-    "conv_68b732626f9c819696eb65567a6f217b06534d8b42a1bf66": {
-      "id": "conv_68b732626f9c819696eb65567a6f217b06534d8b42a1bf66",
-      "title": "Chat 14:07",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T18:07:28.640Z",
-      "updatedAt": "2025-09-02T18:07:27.186Z"
-    },
-    "conv_68b7334bc4b4819390dad7392de80e0007c7925dc669adc2": {
-      "id": "conv_68b7334bc4b4819390dad7392de80e0007c7925dc669adc2",
-      "title": "Chat 14:11",
-      "preview": "Nueva conversación...",
-      "pinned": false,
-      "folder": "General",
-      "messageCount": 0,
-      "createdAt": "2025-09-02T18:11:22.027Z",
-      "updatedAt": "2025-09-02T18:11:20.763Z"
+      "createdAt": "2025-11-19T12:38:20.107Z",
+      "updatedAt": "2025-11-19T12:38:56.658Z"
     }
   }
 }
