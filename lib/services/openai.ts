@@ -21,10 +21,20 @@ import type {
 // Re-exportar tipos para compatibilidad
 export type { ChatMessage, ChatResponse, ChatMode, ChatOptions }
 
-// Configuración del cliente OpenAI
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Cliente OpenAI con lazy initialization para evitar errores en build
+let _client: OpenAI | null = null
+
+function getClient(): OpenAI {
+  if (!_client) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY no configurada')
+    }
+    _client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return _client
+}
 
 export class OpenAIService {
   private static instance: OpenAIService
@@ -130,7 +140,7 @@ export class OpenAIService {
 
       ModeConfigurator.logRequestConfig(requestBody)
 
-      const response = await client.responses.create(requestBody)
+      const response = await getClient().responses.create(requestBody)
 
       ResponseProcessor.logResponse(response)
 
@@ -166,7 +176,7 @@ export class OpenAIService {
           )
           
           console.log('📤 Reintentando sin tools...')
-          const fallbackResponse = await client.responses.create(fallbackBody)
+          const fallbackResponse = await getClient().responses.create(fallbackBody)
           
           console.log('📥 Respuesta fallback:', {
             id: fallbackResponse.id,
@@ -250,7 +260,7 @@ export class OpenAIService {
       })
 
       // Generar respuesta usando Responses API (sin conversation_id)
-      const response = await client.responses.create(requestBody)
+      const response = await getClient().responses.create(requestBody)
 
       console.log('📥 Respuesta de conversación:', {
         id: response.id,
@@ -269,7 +279,7 @@ export class OpenAIService {
       // Si hay herramientas MCP procesadas, agregar manualmente el resultado a la conversación
       // porque el Responses API no maneja tool outputs automáticamente con conversation_id
       if (toolProcessingResult && finalContent) {
-        await client.conversations.items.create(conversationId, {
+        await getClient().conversations.items.create(conversationId, {
           items: [{
             type: 'message',
             role: 'assistant',

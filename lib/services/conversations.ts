@@ -2,10 +2,20 @@ import OpenAI from 'openai'
 import type { Conversation, Message } from '@/lib/types/chat'
 import ConversationFileStore from '@/lib/stores/conversation-file-store'
 
-// Cliente OpenAI configurado
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Cliente OpenAI con lazy initialization para evitar errores en build
+let _client: OpenAI | null = null
+
+function getClient(): OpenAI {
+  if (!_client) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY no configurada')
+    }
+    _client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return _client
+}
 
 export class ConversationService {
   private static instance: ConversationService
@@ -49,7 +59,7 @@ export class ConversationService {
         content: [{ type: "input_text" as const, text: initialMessage }]
       }] : []
 
-      const conversation = await client.conversations.create({
+      const conversation = await getClient().conversations.create({
         metadata,
         items
       })
@@ -79,7 +89,7 @@ export class ConversationService {
    */
   async getConversation(conversationId: string): Promise<Conversation | null> {
     try {
-      const conversation = await client.conversations.retrieve(conversationId)
+      const conversation = await getClient().conversations.retrieve(conversationId)
       const openaiMessages = await this.getMessages(conversationId)
       
       const formattedConversation = this.formatConversationForUI(conversation)
@@ -148,7 +158,7 @@ export class ConversationService {
       // Hacer retrieve individual para cada conversación
       for (const id of moreIds) {
         try {
-          const conversation = await client.conversations.retrieve(id)
+          const conversation = await getClient().conversations.retrieve(id)
           const formattedConversation = this.formatConversationForUI(conversation)
           formattedConversation.messages = [] // No cargar mensajes
           conversations.push(formattedConversation)
@@ -172,7 +182,7 @@ export class ConversationService {
    */
   async updateConversation(conversationId: string, updates: Partial<Conversation>): Promise<void> {
     try {
-      const current = await client.conversations.retrieve(conversationId)
+      const current = await getClient().conversations.retrieve(conversationId)
       
       const newMetadata = {
         ...(current.metadata || {}),
@@ -182,7 +192,7 @@ export class ConversationService {
         updatedAt: new Date().toISOString()
       }
 
-      await client.conversations.update(conversationId, {
+      await getClient().conversations.update(conversationId, {
         metadata: newMetadata
       })
 
@@ -218,7 +228,7 @@ export class ConversationService {
         content: [{ type: "input_text" as const, text: message.content }]
       }]
 
-      await client.conversations.items.create(conversationId, { items })
+      await getClient().conversations.items.create(conversationId, { items })
       console.log(`✅ Mensaje agregado a conversación: ${conversationId} Rol: ${message.role}`)
 
       // Actualizar metadata solo contando mensajes de la API
@@ -258,7 +268,7 @@ export class ConversationService {
    */
   private async getConversationMetadata(conversationId: string): Promise<Record<string, string> | null> {
     try {
-      const conversation = await client.conversations.retrieve(conversationId)
+      const conversation = await getClient().conversations.retrieve(conversationId)
       return (conversation.metadata || {}) as Record<string, string>
     } catch (error) {
       console.error('❌ Error obteniendo metadata:', error)
@@ -271,7 +281,7 @@ export class ConversationService {
    */
   async getMessages(conversationId: string, limit: number = 50): Promise<Message[]> {
     try {
-      const response = await client.conversations.items.list(conversationId, {
+      const response = await getClient().conversations.items.list(conversationId, {
         limit,
         order: 'asc'
       })
@@ -375,7 +385,7 @@ export class ConversationService {
    */
   async deleteConversation(conversationId: string): Promise<void> {
     try {
-      await client.conversations.delete(conversationId)
+      await getClient().conversations.delete(conversationId)
       await this.fileStore.removeConversation(conversationId)
       
       // No necesitamos limpiar localStorage ya que solo usamos la API
