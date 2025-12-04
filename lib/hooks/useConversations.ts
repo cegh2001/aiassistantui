@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import ConversationClientService from '@/lib/services/conversations-client'
 import type { Conversation, Message } from '@/lib/types/chat'
 
@@ -47,10 +47,14 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [lastLoadTime, setLastLoadTime] = useState<number>(0)
   
   // Caché en memoria para conversaciones recién cargadas (optimización de velocidad)
   const [conversationCache, setConversationCache] = useState<Map<string, { conversation: Conversation, timestamp: number }>>(new Map())
+
+  // Referencias para evitar bucles infinitos
+  const lastLoadTimeRef = useRef<number>(0)
+  const hasLoadedOnceRef = useRef<boolean>(false)
+  const isLoadingRef = useRef<boolean>(false)
 
   const conversationService = ConversationClientService.getInstance()
 
@@ -58,23 +62,31 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
   const CACHE_DURATION = 30 * 1000 // 30 segundos
   const CONVERSATION_CACHE_DURATION = 60 * 1000 // 1 minuto para conversaciones individuales
 
-  // Cargar conversaciones con caché
+  // Cargar conversaciones con caché (SIN dependencias de state para evitar bucles)
   const loadConversations = useCallback(async (forceRefresh = false) => {
     const now = Date.now()
     
-    // Si no es forzado y tenemos caché válido, no recargar
-    if (!forceRefresh && conversations.length > 0 && (now - lastLoadTime) < CACHE_DURATION) {
+    // Evitar llamadas concurrentes
+    if (isLoadingRef.current) {
+      console.log('⏳ Ya hay una carga en progreso, ignorando...')
+      return
+    }
+    
+    // Si ya cargamos una vez y no es forzado, usar caché por tiempo
+    if (!forceRefresh && hasLoadedOnceRef.current && (now - lastLoadTimeRef.current) < CACHE_DURATION) {
       console.log('📦 Usando caché de conversaciones')
       return
     }
 
+    isLoadingRef.current = true
     setIsLoading(true)
     setError(null)
     
     try {
       const loadedConversations = await conversationService.listConversations()
       setConversations(loadedConversations)
-      setLastLoadTime(now)
+      lastLoadTimeRef.current = now
+      hasLoadedOnceRef.current = true
       
       // Si obtenemos exactamente 10 conversaciones (el límite inicial), hay posibilidad de más
       setHasMore(loadedConversations.length === 10)
@@ -84,10 +96,13 @@ export function useConversations(options: UseConversationsOptions = {}): UseConv
       const errorMessage = err instanceof Error ? err.message : 'Error cargando conversaciones'
       setError(errorMessage)
       console.error('Error cargando conversaciones:', err)
+      // Marcar como cargado aunque falle para no reintentar infinitamente
+      hasLoadedOnceRef.current = true
     } finally {
       setIsLoading(false)
+      isLoadingRef.current = false
     }
-  }, [conversationService, conversations.length, lastLoadTime])
+  }, [conversationService]) // Solo depende del servicio (estable)
 
   // Crear nueva conversación
   const createConversation = useCallback(async (title?: string): Promise<string> => {
