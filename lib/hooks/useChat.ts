@@ -2,20 +2,24 @@ import { useState, useCallback } from 'react'
 import { type ChatMessage, type ChatOptions, type ChatResponse } from '@/lib/services/openai'
 
 interface LimitInfo {
-  environment: 'production' | 'development'
-  enforceLimits: boolean
-  maxResponses: number
-  currentResponses: number
-  remainingResponses: number
-  hasReachedLimit: boolean
+  remaining?: number
+  max?: number
   warning?: string
+  // Campos adicionales para errores
+  environment?: 'production' | 'development'
+  enforceLimits?: boolean
+  maxResponses?: number
+  currentResponses?: number
+  remainingResponses?: number
+  hasReachedLimit?: boolean
+  ip?: string
 }
 
 interface UseChatOptions {
   conversationId?: string // Para enviar mensajes en una conversación específica
-  onSuccess?: (response: ChatResponse) => void
+  onSuccess?: (response: ChatResponse, limitInfo?: LimitInfo) => void
   onError?: (error: string, isLimitError?: boolean, limitInfo?: LimitInfo) => void
-  onLimitWarning?: (warning: string, limitInfo?: LimitInfo) => void
+  onLimitWarning?: (warning: string, remaining: number) => void
 }
 
 interface UseChatReturn {
@@ -25,6 +29,7 @@ interface UseChatReturn {
   error: string | null
   isLimitReached: boolean
   limitInfo: LimitInfo | null
+  remainingResponses: number | null
 }
 
 export function useChat(options: UseChatOptions = {}): UseChatReturn {
@@ -32,6 +37,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
   const [error, setError] = useState<string | null>(null)
   const [isLimitReached, setIsLimitReached] = useState(false)
   const [limitInfo, setLimitInfo] = useState<LimitInfo | null>(null)
+  const [remainingResponses, setRemainingResponses] = useState<number | null>(null)
 
   const sendMessage = useCallback(async (
     message: string, 
@@ -47,7 +53,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setIsLoading(true)
     setError(null)
     setIsLimitReached(false)
-    setLimitInfo(null)
 
     try {
       // Combinar conversationId de las opciones del hook con las opciones del chat
@@ -71,11 +76,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
       // Manejo especial de error 429 (límite de respuestas)
       if (response.status === 429) {
-        const isLimitError = result.isLimitReached || result.error?.includes('Límite')
+        const isLimitError = result.isLimitReached || result.error?.includes('límite')
         setIsLimitReached(true)
+        setRemainingResponses(0)
         if (result.limitInfo) {
           setLimitInfo(result.limitInfo)
         }
+        setError(result.error || 'Límite alcanzado')
         options.onError?.(result.error || 'Límite alcanzado', isLimitError, result.limitInfo)
         return null
       }
@@ -84,8 +91,19 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
 
+      // Procesar info de límite en respuesta exitosa
+      if (result.limitInfo) {
+        setLimitInfo(result.limitInfo)
+        setRemainingResponses(result.limitInfo.remaining ?? null)
+        
+        // Notificar advertencia si existe
+        if (result.limitInfo.warning) {
+          options.onLimitWarning?.(result.limitInfo.warning, result.limitInfo.remaining)
+        }
+      }
+
       const chatResponse: ChatResponse = result.data
-      options.onSuccess?.(chatResponse)
+      options.onSuccess?.(chatResponse, result.limitInfo)
       return chatResponse
 
     } catch (err) {
@@ -112,7 +130,6 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     setIsLoading(true)
     setError(null)
     setIsLimitReached(false)
-    setLimitInfo(null)
 
     try {
       // Combinar conversationId de las opciones del hook con las opciones del chat
@@ -136,11 +153,13 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
 
       // Manejo especial de error 429 (límite de respuestas)
       if (response.status === 429) {
-        const isLimitError = result.isLimitReached || result.error?.includes('Límite')
+        const isLimitError = result.isLimitReached || result.error?.includes('límite')
         setIsLimitReached(true)
+        setRemainingResponses(0)
         if (result.limitInfo) {
           setLimitInfo(result.limitInfo)
         }
+        setError(result.error || 'Límite alcanzado')
         options.onError?.(result.error || 'Límite alcanzado', isLimitError, result.limitInfo)
         return null
       }
@@ -149,8 +168,19 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
 
+      // Procesar info de límite en respuesta exitosa
+      if (result.limitInfo) {
+        setLimitInfo(result.limitInfo)
+        setRemainingResponses(result.limitInfo.remaining ?? null)
+        
+        // Notificar advertencia si existe
+        if (result.limitInfo.warning) {
+          options.onLimitWarning?.(result.limitInfo.warning, result.limitInfo.remaining)
+        }
+      }
+
       const chatResponse: ChatResponse = result.data
-      options.onSuccess?.(chatResponse)
+      options.onSuccess?.(chatResponse, result.limitInfo)
       return chatResponse
 
     } catch (err) {
@@ -169,7 +199,8 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
     isLoading,
     error,
     isLimitReached,
-    limitInfo
+    limitInfo,
+    remainingResponses
   }
 }
 
