@@ -1,32 +1,34 @@
 /**
- * Demo Limit Service - Controla límites de respuestas por IP en producción
- * Almacena datos en JSON para persistencia simple sin base de datos
+ * Demo Limit Service - Controla límites de respuestas en producción
+ * 
+ * Usa cookies firmadas para persistir el conteo de respuestas.
+ * En Vercel/serverless, NO se puede usar sistema de archivos porque es efímero.
+ * 
+ * Flujo:
+ * 1. Lee cookie del request para obtener conteo actual
+ * 2. Valida firma para evitar manipulación
+ * 3. Si alcanzó límite → bloquea
+ * 4. Si no → permite y devuelve nueva cookie con conteo incrementado
  */
 
 import { isProduction } from '@/lib/utils/environment'
-import fs from 'fs'
-import path from 'path'
+import crypto from 'crypto'
 
-const MAX_RESPONSES_PER_IP = 4
-const DATA_FILE = path.join(process.cwd(), 'data', 'demo-limits.json')
+const MAX_RESPONSES_PER_USER = 4
+const COOKIE_NAME = 'demo_limit'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30 // 30 días
 
-interface IPLimitData {
-  responses: number
-  firstSeen: string
-  lastSeen: string
-  conversations: string[] // IDs de conversaciones usadas
-}
+// Clave secreta para firmar cookies
+const SECRET_KEY = process.env.DEMO_LIMIT_SECRET || 'ai-assistant-demo-2025-secret'
 
-interface DemoLimitsStore {
-  _comment: string
-  limits: Record<string, IPLimitData>
+interface DemoLimitData {
+  r: number      // responses count
+  f: number      // firstSeen timestamp
+  l: number      // lastSeen timestamp
 }
 
 export class DemoLimitService {
   private static instance: DemoLimitService
-  private cache: DemoLimitsStore | null = null
-  private lastRead: number = 0
-  private readonly CACHE_TTL = 5000 // 5 segundos de caché
 
   private constructor() {}
 
@@ -45,70 +47,13 @@ export class DemoLimitService {
   }
 
   /**
-   * Lee los datos del archivo JSON con caché
-   */
-  private readData(): DemoLimitsStore {
-    const now = Date.now()
-    
-    // Usar caché si es válido
-    if (this.cache && (now - this.lastRead) < this.CACHE_TTL) {
-      return this.cache
-    }
-
-    try {
-      // Asegurar que el directorio existe
-      const dir = path.dirname(DATA_FILE)
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
-      }
-
-      // Leer o crear archivo
-      if (fs.existsSync(DATA_FILE)) {
-        const content = fs.readFileSync(DATA_FILE, 'utf-8')
-        this.cache = JSON.parse(content)
-      } else {
-        this.cache = {
-          _comment: "Límites de demo por IP. No editar manualmente.",
-          limits: {}
-        }
-        this.writeData(this.cache)
-      }
-
-      this.lastRead = now
-      return this.cache!
-    } catch (error) {
-      console.error('❌ Error leyendo demo-limits.json:', error)
-      return { _comment: "", limits: {} }
-    }
-  }
-
-  /**
-   * Escribe los datos al archivo JSON
-   */
-  private writeData(data: DemoLimitsStore): void {
-    try {
-      const dir = path.dirname(DATA_FILE)
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true })
-      }
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8')
-      this.cache = data
-      this.lastRead = Date.now()
-    } catch (error) {
-      console.error('❌ Error escribiendo demo-limits.json:', error)
-    }
-  }
-
-  /**
-   * Extrae la IP del request de Next.js
+   * Extrae la IP del request
    */
   extractIP(request: Request): string {
     const headers = new Headers(request.headers)
     
-    // Prioridad de headers para obtener IP real
     const forwardedFor = headers.get('x-forwarded-for')
     if (forwardedFor) {
-      // x-forwarded-for puede tener múltiples IPs, tomar la primera
       return forwardedFor.split(',')[0].trim()
     }
 
@@ -117,163 +62,213 @@ export class DemoLimitService {
       return realIP.trim()
     }
 
-    // Vercel específico
     const vercelIP = headers.get('x-vercel-forwarded-for')
     if (vercelIP) {
       return vercelIP.split(',')[0].trim()
     }
 
-    // Fallback para desarrollo local
     return '127.0.0.1'
   }
 
   /**
-   * Obtiene los datos de límite para una IP
+   * Firma datos con HMAC-SHA256
    */
-  getIPData(ip: string): IPLimitData | null {
-    const data = this.readData()
-    return data.limits[ip] || null
+  private sign(data: string): string {
+    const hmac = crypto.createHmac('sha256', SECRET_KEY)
+    hmac.update(data)
+    return hmac.digest('hex').substring(0, 16) // Solo primeros 16 chars para acortar cookie
   }
 
   /**
-   * Verifica si una IP ha alcanzado el límite
+   * Verifica firma de datos
    */
-  hasReachedLimit(ip: string): boolean {
+  private verifySign(data: string, signature: string): boolean {
+    try {
+      const expected = this.sign(data)
+      if (expected.length !== signature.length) return false
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(expected)
+      )
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Codifica datos para cookie
+   */
+  private encode(data: DemoLimitData): string {
+    const json = JSON.stringify(data)
+    const base64 = Buffer.from(json).toString('base64url')
+    const sig = this.sign(base64)
+    return `${base64}.${sig}`
+  }
+
+  /**
+   * Decodifica y valida datos de cookie
+   */
+  private decode(cookieValue: string): DemoLimitData | null {
+    try {
+      const parts = cookieValue.split('.')
+      if (parts.length !== 2) return null
+      
+      const [base64, sig] = parts
+      
+      if (!this.verifySign(base64, sig)) {
+        console.warn('⚠️ Cookie demo_limit con firma inválida - posible manipulación')
+        return null
+      }
+
+      const json = Buffer.from(base64, 'base64url').toString('utf-8')
+      const data = JSON.parse(json) as DemoLimitData
+      
+      // Validar estructura
+      if (typeof data.r !== 'number' || typeof data.f !== 'number') {
+        return null
+      }
+      
+      return data
+    } catch (error) {
+      console.error('❌ Error decodificando cookie demo_limit:', error)
+      return null
+    }
+  }
+
+  /**
+   * Extrae datos de límite del request
+   */
+  getLimitDataFromRequest(request: Request): DemoLimitData | null {
+    const cookieHeader = request.headers.get('cookie')
+    if (!cookieHeader) return null
+
+    const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`))
+    if (!match) return null
+
+    return this.decode(decodeURIComponent(match[1]))
+  }
+
+  /**
+   * Verifica si el usuario ha alcanzado el límite
+   */
+  hasReachedLimit(request: Request): boolean {
     if (!this.shouldEnforceLimits()) {
       return false
     }
 
-    const ipData = this.getIPData(ip)
-    if (!ipData) {
-      return false
+    const data = this.getLimitDataFromRequest(request)
+    if (!data) {
+      return false // Primera visita
     }
 
-    return ipData.responses >= MAX_RESPONSES_PER_IP
+    const hasReached = data.r >= MAX_RESPONSES_PER_USER
+    
+    if (hasReached) {
+      console.log(`🚫 Límite alcanzado: ${data.r}/${MAX_RESPONSES_PER_USER} respuestas`)
+    }
+    
+    return hasReached
   }
 
   /**
-   * Obtiene el número de respuestas restantes para una IP
+   * Obtiene respuestas restantes
    */
-  getRemainingResponses(ip: string): number {
+  getRemainingResponses(request: Request): number {
     if (!this.shouldEnforceLimits()) {
       return Infinity
     }
 
-    const ipData = this.getIPData(ip)
-    if (!ipData) {
-      return MAX_RESPONSES_PER_IP
+    const data = this.getLimitDataFromRequest(request)
+    if (!data) {
+      return MAX_RESPONSES_PER_USER
     }
 
-    return Math.max(0, MAX_RESPONSES_PER_IP - ipData.responses)
+    return Math.max(0, MAX_RESPONSES_PER_USER - data.r)
   }
 
   /**
-   * Registra una respuesta para una IP
+   * Obtiene respuestas actuales
    */
-  recordResponse(ip: string, conversationId?: string): void {
-    if (!this.shouldEnforceLimits()) {
-      return
-    }
-
-    const data = this.readData()
-    const now = new Date().toISOString()
-
-    if (!data.limits[ip]) {
-      data.limits[ip] = {
-        responses: 0,
-        firstSeen: now,
-        lastSeen: now,
-        conversations: []
-      }
-    }
-
-    data.limits[ip].responses += 1
-    data.limits[ip].lastSeen = now
-
-    if (conversationId && !data.limits[ip].conversations.includes(conversationId)) {
-      data.limits[ip].conversations.push(conversationId)
-    }
-
-    this.writeData(data)
-
-    console.log(`📊 Demo limit: IP ${ip} ha usado ${data.limits[ip].responses}/${MAX_RESPONSES_PER_IP} respuestas`)
+  getCurrentResponses(request: Request): number {
+    const data = this.getLimitDataFromRequest(request)
+    return data?.r || 0
   }
 
   /**
-   * Obtiene información completa del límite para una IP
+   * Crea cookie header con conteo incrementado
    */
-  getLimitInfo(ip: string) {
-    const ipData = this.getIPData(ip)
-    const remaining = this.getRemainingResponses(ip)
-    const hasReached = this.hasReachedLimit(ip)
+  createIncrementedCookie(request: Request): string {
+    const currentData = this.getLimitDataFromRequest(request)
+    const now = Date.now()
+
+    const newData: DemoLimitData = {
+      r: (currentData?.r || 0) + 1,
+      f: currentData?.f || now,
+      l: now
+    }
+
+    const cookieValue = this.encode(newData)
+    const secure = isProduction() ? '; Secure' : ''
+    
+    console.log(`📊 Demo limit actualizado: ${newData.r}/${MAX_RESPONSES_PER_USER} respuestas`)
+    
+    return `${COOKIE_NAME}=${encodeURIComponent(cookieValue)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}${secure}`
+  }
+
+  /**
+   * Obtiene información del límite
+   */
+  getLimitInfo(request: Request) {
+    const data = this.getLimitDataFromRequest(request)
+    const currentResponses = data?.r || 0
+    const remaining = Math.max(0, MAX_RESPONSES_PER_USER - currentResponses)
 
     return {
-      ip,
+      ip: this.extractIP(request),
       environment: isProduction() ? 'production' : 'development',
       enforceLimits: this.shouldEnforceLimits(),
-      maxResponses: MAX_RESPONSES_PER_IP,
-      currentResponses: ipData?.responses || 0,
+      maxResponses: MAX_RESPONSES_PER_USER,
+      currentResponses,
       remainingResponses: remaining,
-      hasReachedLimit: hasReached,
-      firstSeen: ipData?.firstSeen,
-      lastSeen: ipData?.lastSeen,
-      conversationsUsed: ipData?.conversations.length || 0
+      hasReachedLimit: currentResponses >= MAX_RESPONSES_PER_USER
     }
   }
 
   /**
-   * Genera mensaje de error cuando se alcanza el límite
+   * Mensaje de error cuando se alcanza el límite
    */
   getLimitReachedMessage(): string {
-    return `Has alcanzado el límite de ${MAX_RESPONSES_PER_IP} respuestas en esta demostración. Gracias por probar AI Assistant UI.`
+    return `Has alcanzado el límite de ${MAX_RESPONSES_PER_USER} respuestas en esta demostración. ¡Gracias por probar AI Assistant UI!`
   }
 
   /**
-   * Genera mensaje de advertencia cuando se acerca al límite
+   * Mensaje de advertencia cuando se acerca al límite
    */
   getWarningMessage(remaining: number): string | undefined {
     if (!this.shouldEnforceLimits() || remaining === Infinity) {
       return undefined
     }
 
+    if (remaining === 0) {
+      return `Has alcanzado el límite de respuestas de esta demostración.`
+    }
+
     if (remaining === 1) {
       return `⚠️ Esta es tu última respuesta disponible en esta demostración.`
     }
 
-    if (remaining > 0 && remaining <= 2) {
-      return `⚠️ Solo te quedan ${remaining} respuesta${remaining === 1 ? '' : 's'} en esta demostración.`
+    if (remaining <= 2) {
+      return `⚠️ Solo te quedan ${remaining} respuestas en esta demostración.`
     }
 
     return undefined
   }
 
   /**
-   * Limpia IPs antiguas (más de 30 días) - para mantenimiento
+   * Obtiene el máximo de respuestas permitidas
    */
-  cleanupOldEntries(daysOld: number = 30): number {
-    const data = this.readData()
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - daysOld)
-    
-    let removed = 0
-    const newLimits: Record<string, IPLimitData> = {}
-
-    for (const [ip, ipData] of Object.entries(data.limits)) {
-      const lastSeen = new Date(ipData.lastSeen)
-      if (lastSeen > cutoff) {
-        newLimits[ip] = ipData
-      } else {
-        removed++
-      }
-    }
-
-    if (removed > 0) {
-      data.limits = newLimits
-      this.writeData(data)
-      console.log(`🧹 Limpieza: ${removed} IPs antiguas eliminadas`)
-    }
-
-    return removed
+  getMaxResponses(): number {
+    return MAX_RESPONSES_PER_USER
   }
 }
 

@@ -3,9 +3,7 @@ import OpenAIService, { type ChatMessage, type ChatOptions } from '@/lib/service
 import { DemoLimitService } from '@/lib/services/demo-limit-service'
 
 export async function POST(request: NextRequest) {
-  // Obtener servicio de límites y extraer IP
   const demoLimitService = DemoLimitService.getInstance()
-  const clientIP = demoLimitService.extractIP(request)
   
   try {
     // Verificar que OpenAI esté configurado
@@ -19,13 +17,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // CRÍTICO: Verificar límite de respuestas POR IP en producción ANTES de procesar
+    // CRÍTICO: Verificar límite de respuestas ANTES de procesar
     if (demoLimitService.shouldEnforceLimits()) {
-      if (demoLimitService.hasReachedLimit(clientIP)) {
-        const limitInfo = demoLimitService.getLimitInfo(clientIP)
+      if (demoLimitService.hasReachedLimit(request)) {
+        const limitInfo = demoLimitService.getLimitInfo(request)
         const errorMessage = demoLimitService.getLimitReachedMessage()
         
-        console.warn(`⚠️ Límite de demo alcanzado para IP ${clientIP}:`, limitInfo)
+        console.warn(`🚫 Límite de demo alcanzado:`, limitInfo)
         
         return NextResponse.json(
           {
@@ -34,15 +32,15 @@ export async function POST(request: NextRequest) {
             limitInfo,
             isLimitReached: true
           },
-          { status: 429 } // Too Many Requests
+          { status: 429 }
         )
       }
 
-      // Advertencia si se acerca al límite
-      const remaining = demoLimitService.getRemainingResponses(clientIP)
+      // Log de advertencia si se acerca al límite
+      const remaining = demoLimitService.getRemainingResponses(request)
       const warning = demoLimitService.getWarningMessage(remaining)
       if (warning) {
-        console.log(`⏳ IP ${clientIP}: ${warning}`)
+        console.log(`⏳ ${warning}`)
       }
     }
 
@@ -62,10 +60,8 @@ export async function POST(request: NextRequest) {
     let response
 
     if (messages && messages.length > 0) {
-      // Conversación completa
       response = await openaiService.sendConversation(messages, options)
     } else if (message) {
-      // Mensaje simple
       response = await openaiService.sendMessage(message, options)
     } else {
       return NextResponse.json(
@@ -74,21 +70,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ÉXITO: Registrar respuesta para esta IP
+    // ÉXITO: Crear respuesta con cookie actualizada
     if (demoLimitService.shouldEnforceLimits()) {
-      demoLimitService.recordResponse(clientIP, options.conversationId)
+      const cookieHeader = demoLimitService.createIncrementedCookie(request)
+      const limitInfo = demoLimitService.getLimitInfo(request)
       
-      // Incluir info de límite en respuesta exitosa
-      const limitInfo = demoLimitService.getLimitInfo(clientIP)
-      return NextResponse.json({
+      // Calcular remaining DESPUÉS de incrementar (por eso restamos 1)
+      const newRemaining = Math.max(0, limitInfo.remainingResponses - 1)
+      
+      const jsonResponse = NextResponse.json({
         success: true,
         data: response,
         limitInfo: {
-          remaining: limitInfo.remainingResponses,
+          remaining: newRemaining,
           max: limitInfo.maxResponses,
-          warning: demoLimitService.getWarningMessage(limitInfo.remainingResponses)
+          current: limitInfo.currentResponses + 1,
+          warning: demoLimitService.getWarningMessage(newRemaining)
         }
       })
+      
+      // Setear cookie en la respuesta
+      jsonResponse.headers.set('Set-Cookie', cookieHeader)
+      
+      return jsonResponse
     }
 
     return NextResponse.json({
@@ -99,10 +103,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error en API de chat:', error)
     
-    // Detectar si es error de límite de respuestas
-    const limitService = DemoLimitService.getInstance()
     const isLimitError = error instanceof Error && 
-      limitService.getLimitReachedMessage() === error.message
+      demoLimitService.getLimitReachedMessage() === error.message
     
     const statusCode = isLimitError ? 429 : 500
     const errorMessage = error instanceof Error ? error.message : 'Error interno del servidor'
