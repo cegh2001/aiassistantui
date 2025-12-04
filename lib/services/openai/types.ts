@@ -37,6 +37,7 @@ export interface ChatOptions {
   maxOutputTokens?: number
   conversationId?: string // Para continuar conversaciones existentes
   previousResponseId?: string
+  messages?: ChatMessage[] // Para verificar límite en conversaciones
 }
 
 export interface ModeConfig {

@@ -6,6 +6,7 @@ import { ModeConfigurator } from './openai/mode-configurator'
 import { PromptProcessor } from './openai/prompt-processor'
 import { MCPToolHandler } from './openai/mcp-tool-handler'
 import { ResponseProcessor } from './openai/response-processor'
+import { ResponseLimiter } from './openai/response-limiter'
 import { DEFAULT_CONFIG } from './openai/constants'
 
 // Importar tipos refactorizados
@@ -53,8 +54,25 @@ export class OpenAIService {
         verbosity,
         maxOutputTokens = DEFAULT_CONFIG.MAX_OUTPUT_TOKENS,
         conversationId,
-        previousResponseId
+        previousResponseId,
+        messages = [] // Para verificar límite en conversaciones
       } = options
+
+      // CRÍTICO: Verificar límite de respuestas en producción
+      if (ResponseLimiter.shouldEnforceLimits() && messages.length > 0) {
+        if (ResponseLimiter.hasReachedResponseLimit(messages)) {
+          const limitError = ResponseLimiter.getLimitReachedMessage()
+          console.warn(`⚠️ Límite alcanzado: ${limitError}`)
+          throw new Error(limitError)
+        }
+        
+        // Log de advertencia si se acerca al límite
+        const remaining = ResponseLimiter.getRemainingResponses(messages)
+        const warning = ResponseLimiter.getWarningMessage(remaining)
+        if (warning) {
+          console.log(`⚠️ ${warning}`)
+        }
+      }
 
       // Analizar contexto usando módulos refactorizados
       const context = ContextDetector.analyzeContext(input, requestedMode)
@@ -296,6 +314,22 @@ export class OpenAIService {
     options: ChatOptions = {}
   ): Promise<ChatResponse> {
     try {
+      // CRÍTICO: Verificar límite de respuestas en producción PRIMERO
+      if (ResponseLimiter.shouldEnforceLimits()) {
+        if (ResponseLimiter.hasReachedResponseLimit(messages)) {
+          const limitError = ResponseLimiter.getLimitReachedMessage()
+          console.warn(`⚠️ Límite alcanzado: ${limitError}`)
+          throw new Error(limitError)
+        }
+
+        // Log de advertencia si se acerca al límite
+        const remaining = ResponseLimiter.getRemainingResponses(messages)
+        const warning = ResponseLimiter.getWarningMessage(remaining)
+        if (warning) {
+          console.log(`⚠️ ${warning}`)
+        }
+      }
+
       const { conversationId, ...restOptions } = options
 
       if (conversationId) {

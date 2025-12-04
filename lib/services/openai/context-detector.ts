@@ -4,12 +4,19 @@
 
 import { DATABASE_KEYWORDS, COMPLEX_KEYWORDS, CHAT_MODES } from './constants'
 import type { ChatMode } from './types'
+import { isProduction } from '@/lib/utils/environment'
 
 export class ContextDetector {
   /**
    * Detecta si un mensaje requiere herramientas de base de datos
+   * NOTA: En producción, las herramientas de BD están deshabilitadas (experimental)
    */
   static shouldUseDatabaseTools(input: string): boolean {
+    // En producción, deshabilitar herramientas de BD (feature experimental)
+    if (isProduction()) {
+      return false
+    }
+    
     const inputLower = input.toLowerCase()
     return DATABASE_KEYWORDS.some(keyword => inputLower.includes(keyword))
   }
@@ -39,6 +46,15 @@ export class ContextDetector {
   static analyzeContext(input: string, requestedMode: ChatMode) {
     const needsDatabaseTools = this.shouldUseDatabaseTools(input)
     const effectiveMode = this.determineEffectiveMode(input, requestedMode)
+    
+    // Log en producción cuando se detecta intento de usar BD
+    if (isProduction()) {
+      const inputLower = input.toLowerCase()
+      const wouldNeedDb = DATABASE_KEYWORDS.some(keyword => inputLower.includes(keyword))
+      if (wouldNeedDb) {
+        console.log('🔒 Herramientas de BD deshabilitadas en producción (feature experimental)')
+      }
+    }
     
     return {
       needsDatabaseTools,
